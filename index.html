@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comparamaps - Comparador y Medidor de Mapas</title>
+    <title>Comparamapas - Comparador y Medidor de Mapas</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0F1D'/%3E%3Cpath d='M8 10l6-3v15l-6 3V10zm8 3l6-3v15l-6 3V13z' fill='%2300E5FF'/%3E%3C/svg%3E">
     
     <!-- Tailwind CSS -->
@@ -17,10 +17,6 @@
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
-    <!-- Proj4js & Proj4Leaflet para proyecciones cartográficas reales (EPSG:6933 Equal Area, EPSG:4326, etc.) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.min.js"></script>
 
     <!-- Leaflet Rotate Plugin (Soporte nativo de rotación de vista / rumbo / Norte con coordenadas exactas) -->
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
@@ -53,8 +49,10 @@
         }
 
         .leaflet-container {
-            background-color: #1e293b;
+            background-color: #0f172a;
             font-family: 'Inter', sans-serif;
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+            transform-origin: center center;
         }
 
         /* Personalización de controles de zoom de Leaflet */
@@ -70,10 +68,10 @@
             backdrop-filter: blur(8px);
             color: #f8fafc !important;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-            width: 36px !important;
-            height: 36px !important;
-            line-height: 36px !important;
-            font-size: 16px !important;
+            width: 34px !important;
+            height: 34px !important;
+            line-height: 34px !important;
+            font-size: 15px !important;
             transition: all 0.15s ease;
         }
 
@@ -84,7 +82,7 @@
 
         /* Etiquetas de segmentos de distancia sobre el mapa */
         .segment-tooltip {
-            background: rgba(15, 23, 42, 0.9) !important;
+            background: rgba(15, 23, 42, 0.92) !important;
             backdrop-filter: blur(4px);
             border: 1px solid rgba(244, 63, 94, 0.6) !important;
             color: #f8fafc !important;
@@ -120,7 +118,7 @@
             animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
 
-        /* Ocultar el control de brújula por defecto de leaflet-rotate para usar nuestra brújula avanzada */
+        /* Ocultar el control de brújula por defecto de leaflet-rotate */
         .leaflet-control-rotate {
             display: none !important;
         }
@@ -143,7 +141,7 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            background: #38bdf8;
+            background: #00E5FF;
             border: 2px solid #ffffff;
             margin-top: -4.5px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.5);
@@ -158,120 +156,131 @@
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen flex flex-col font-sans select-none">
 
-    <!-- BARRA SUPERIOR DE CONTROL GLOBAL -->
-    <header class="h-14 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-[1000] shadow-lg">
-        <!-- Logo y Estado de Ventana -->
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                    <i class="fa-solid fa-map-location-dot text-sm"></i>
-                </div>
-                <h1 class="font-bold text-sm sm:text-base tracking-tight text-slate-100 hidden sm:block">GeoSync <span class="text-blue-400">Dual</span></h1>
+    <!-- BARRA SUPERIOR DE CONTROL GLOBAL (ADAPTABLE EN MÚLTIPLES LÍNEAS EN MÓVIL / PANTALLAS ESTRECHAS) -->
+    <header class="min-h-[3.25rem] py-1.5 px-2.5 sm:px-4 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 shrink-0 z-[1000] shadow-lg">
+        <!-- Logo Oficial Comparamapas y Accesos Rápidos -->
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div class="flex items-center gap-2 mr-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-8 h-8 rounded-lg shadow-md shadow-cyan-500/10 border border-slate-700/80 shrink-0">
+                    <rect width="32" height="32" rx="8" fill="#0A0F1D"/>
+                    <path d="M8 10l6-3v15l-6 3V10zm8 3l6-3v15l-6 3V13z" fill="#00E5FF"/>
+                </svg>
+                <h1 class="font-bold text-sm sm:text-base tracking-tight text-slate-100">Compara<span class="text-[#00E5FF]">mapas</span></h1>
             </div>
+
             <!-- Badge indicador si es ventana secundaria -->
-            <span id="windowRoleBadge" class="hidden px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold">Ventana 2 (Sincronizada)</span>
+            <span id="windowRoleBadge" class="hidden px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold">Ventana 2</span>
             
-            <div class="h-5 w-[1px] bg-slate-800 mx-1"></div>
-            <button id="btnResetCenter" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition flex items-center gap-1.5" title="Centrar ambos mapas en Leganés / Madrid">
+            <!-- Botón Centrar en Madrid / Leganés -->
+            <button id="btnResetCenter" class="px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-semibold transition flex items-center gap-1.5" title="Centrar ambos mapas en Leganés / Madrid">
                 <i class="fa-solid fa-house-chimney text-blue-400"></i>
-                <span class="hidden md:inline">Madrid / Leganés</span>
+                <span>Madrid</span>
+            </button>
+
+            <!-- Botón Demostración Directa de Groenlandia (Mercator vs Tamaño Real) -->
+            <button id="btnGreenlandDemo" class="px-2.5 py-1 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 text-[11px] font-semibold transition flex items-center gap-1.5 shadow-sm" title="Ver comparativa de Groenlandia: Mercator (gigante) vs Tamaño Real (escala real sin distorsión)">
+                <i class="fa-solid fa-earth-americas text-emerald-400"></i>
+                <span>Ver Groenlandia Real</span>
             </button>
         </div>
 
-        <!-- Controles Centrales: Sincronización, Giro, Proyección, División y Medición -->
-        <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Controles Centrales: Sincronización, Proyección/Escala Real, Giro, División y Medición -->
+        <div class="flex flex-wrap items-center gap-1.5">
             <!-- Toggle Zoom Sincronizado (Activo por defecto) -->
-            <button id="btnSyncZoom" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/10" title="Sincronizar el nivel de zoom entre ambos mapas">
+            <button id="btnSyncZoom" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm" title="Sincronizar el nivel de zoom entre ambos mapas">
                 <i id="iconSyncZoom" class="fa-solid fa-magnifying-glass-plus text-blue-400"></i>
-                <span class="hidden sm:inline">Zoom Sincr.</span>
+                <span>Zoom Sincr.</span>
                 <span id="dotSyncZoom" class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
             </button>
 
             <!-- Toggle Posición/Movimiento Relativo Sincronizado -->
-            <button id="btnSyncPan" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el desplazamiento relativo (pan)">
+            <button id="btnSyncPan" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Activar/Desactivar movimiento sincronizado conservando las posiciones actuales de cada mapa">
                 <i class="fa-solid fa-arrows-up-down-left-right text-slate-400"></i>
-                <span class="hidden lg:inline">Posición</span>
+                <span>Posición</span>
                 <span id="dotSyncPan" class="w-2 h-2 rounded-full bg-slate-600"></span>
             </button>
 
-            <!-- Selector de Proyección / Distorsión Global -->
+            <!-- Selector Global de Modo de Escala / Proyección -->
             <div class="relative">
-                <button id="btnGlobalProjectionMenu" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-amber-300 hover:bg-slate-750" title="Cambiar proyección cartográfica para comparar la distorsión de tamaño (ej. Mercator vs Área Equivalente)">
-                    <i class="fa-solid fa-globe text-amber-400"></i>
-                    <span id="globalProjectionLabel" class="hidden md:inline">Mercator vs Gall-Peters</span>
-                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                <button id="btnGlobalProjectionMenu" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25" title="Configurar cómo se corrige la distorsión de tamaño por latitud">
+                    <i class="fa-solid fa-scale-balanced text-amber-400"></i>
+                    <span id="globalProjectionLabel">Mercator vs Tamaño Real</span>
+                    <i class="fa-solid fa-chevron-down text-[9px] text-amber-300"></i>
                 </button>
-                <div id="globalProjectionDropdown" class="hidden absolute left-0 mt-1.5 w-64 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-[1100] divide-y divide-slate-800">
-                    <div class="p-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">Proyección y Distorsión de Tamaños</div>
-                    <button data-proj="mercator" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between bg-slate-800/60">
+                <div id="globalProjectionDropdown" class="hidden absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-72 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-[1100] divide-y divide-slate-800">
+                    <div class="p-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">Modos de Escala y Proyección</div>
+                    <button data-preset="compare_real" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between bg-slate-800/60">
                         <div>
-                            <div class="font-semibold text-amber-300">Web Mercator (EPSG:3857)</div>
-                            <div class="text-[10px] text-slate-400">Distorsiona Groenlandia (parece gigante)</div>
+                            <div class="font-semibold text-emerald-300">Mapa 1: Mercator | Mapa 2: Tamaño Real</div>
+                            <div class="text-[10px] text-slate-400">Compara la distorsión de Groenlandia frente a su escala métrica real</div>
                         </div>
-                        <i class="fa-solid fa-check text-amber-400 proj-check-mercator"></i>
+                        <i class="fa-solid fa-check text-emerald-400"></i>
                     </button>
-                    <button data-proj="equal_area" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
+                    <button data-preset="both_real" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
                         <div>
-                            <div class="font-semibold text-emerald-300">Gall-Peters / Área Eq. (EPSG:6933)</div>
-                            <div class="text-[10px] text-slate-400">Tamaño real de Groenlandia vs África</div>
+                            <div class="font-semibold text-cyan-300">Ambos en Tamaño Real (cos lat)</div>
+                            <div class="text-[10px] text-slate-400">Compara dos países a distintos paralelos con idéntica escala en km</div>
                         </div>
-                        <i class="fa-solid fa-check text-emerald-400 hidden proj-check-equal_area"></i>
+                        <i class="fa-solid fa-check text-cyan-400 hidden"></i>
                     </button>
-                    <button data-proj="plate_carree" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
+                    <button data-preset="compare_gall" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
                         <div>
-                            <div class="font-semibold text-blue-300">Plate Carrée (EPSG:4326)</div>
-                            <div class="text-[10px] text-slate-400">Coordenadas geográficas equirectangulares</div>
+                            <div class="font-semibold text-amber-300">Mapa 1: Mercator | Mapa 2: Gall-Peters</div>
+                            <div class="text-[10px] text-slate-400">Compresión cilíndrica de área equivalente + escala real</div>
                         </div>
-                        <i class="fa-solid fa-check text-blue-400 hidden proj-check-plate_carree"></i>
+                        <i class="fa-solid fa-check text-amber-400 hidden"></i>
+                    </button>
+                    <button data-preset="both_mercator" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-slate-300">Ambos en Mercator Estándar</div>
+                            <div class="text-[10px] text-slate-400">Sin corrección de latitud (Google Maps clásico)</div>
+                        </div>
+                        <i class="fa-solid fa-check text-slate-400 hidden"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Toggle Giro / Norte Sincronizado -->
-            <button id="btnSyncBearing" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el ángulo de rotación (Norte) entre ambos mapas">
+            <button id="btnSyncBearing" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el ángulo de rotación (Norte) entre ambos mapas">
                 <i class="fa-regular fa-compass text-amber-400"></i>
-                <span class="hidden lg:inline">Sincr. Giro</span>
+                <span>Giro</span>
                 <span id="dotSyncBearing" class="w-2 h-2 rounded-full bg-slate-600"></span>
             </button>
 
-            <!-- Botón de igualar vistas inmediatamente (solo bajo demanda explícita) -->
-            <button id="btnAlignNow" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition" title="Igualar centro, zoom y rotación del Mapa 2 con el Mapa 1 ahora mismo">
-                <i class="fa-solid fa-clone"></i>
+            <!-- Botón de igualar vistas inmediatamente -->
+            <button id="btnAlignNow" class="px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] transition flex items-center gap-1" title="Igualar centro, zoom y rotación del Mapa 2 con el Mapa 1 ahora mismo">
+                <i class="fa-solid fa-clone text-cyan-400"></i>
+                <span class="hidden xl:inline">Igualar</span>
             </button>
 
-            <div class="h-5 w-[1px] bg-slate-800 mx-0.5"></div>
-
             <!-- Botón Alternar División Vertical / Horizontal -->
-            <button id="btnToggleSplitLayout" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition" title="Cambiar entre división Lado a Lado (Vertical) o Arriba y Abajo (Horizontal)">
+            <button id="btnToggleSplitLayout" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-semibold transition" title="Cambiar entre división Lado a Lado (Vertical) o Arriba y Abajo (Horizontal)">
                 <i id="iconSplitLayout" class="fa-solid fa-table-columns text-cyan-400"></i>
-                <span id="textSplitLayout" class="hidden md:inline">Lado a Lado</span>
+                <span id="textSplitLayout">Lado a Lado</span>
             </button>
 
             <!-- Botón Modo Medidor de Distancia -->
-            <button id="btnMeasureMode" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50" title="Activar o desactivar medidor de distancia haciendo clic en cualquier mapa">
+            <button id="btnMeasureMode" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50" title="Activar o desactivar medidor de distancia haciendo clic en cualquier mapa">
                 <i class="fa-solid fa-ruler-combined text-rose-400"></i>
-                <span class="hidden sm:inline">Medir</span>
+                <span>Medir</span>
                 <span id="badgeMeasurePoints" class="hidden px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-mono">0</span>
             </button>
-        </div>
 
-        <!-- Controles Derechos: Indicador de Zoom, Ocultar Todo y Ventana Emergente -->
-        <div class="flex items-center gap-2">
-            <!-- Nivel de Zoom en vivo -->
-            <div class="hidden lg:flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-xl">
-                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Zoom</span>
-                <span id="zoomLevelDisplay" class="font-mono text-xs font-bold text-amber-400">14.0</span>
-            </div>
-
-            <!-- Botón Global para ocultar controles de ambos mapas a la vez -->
-            <button id="btnToggleAllCleanMode" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition" title="Mostrar u ocultar todos los paneles flotantes en ambos mapas">
+            <!-- Botón Global Modo Limpio -->
+            <button id="btnToggleAllCleanMode" class="px-2 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] transition" title="Mostrar u ocultar todos los paneles flotantes en ambos mapas">
                 <i id="iconAllCleanMode" class="fa-solid fa-eye-slash"></i>
             </button>
 
+            <!-- Nivel de Zoom Base en vivo -->
+            <div class="hidden xl:flex items-center gap-1 bg-slate-950/90 border border-slate-800 px-2 py-1 rounded-xl">
+                <span class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Zoom</span>
+                <span id="zoomLevelDisplay" class="font-mono text-[11px] font-bold text-amber-400">14.0</span>
+            </div>
+
             <!-- Botón para desacoplar en 2ª ventana emergente real -->
-            <button id="btnPopupWindow" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition cursor-pointer" title="Abrir el Mapa 2 en una ventana separada del navegador sincronizada en tiempo real">
+            <button id="btnPopupWindow" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition cursor-pointer" title="Abrir el Mapa 2 en una ventana separada del navegador sincronizada en tiempo real">
                 <i class="fa-solid fa-up-right-from-square"></i>
-                <span id="popupBtnText" class="hidden sm:inline">Abrir en 2ª Ventana</span>
+                <span id="popupBtnText">2ª Ventana</span>
             </button>
         </div>
     </header>
@@ -280,42 +289,42 @@
     <main id="mapsGridContainer" class="flex-1 flex flex-row relative overflow-hidden bg-slate-950">
         
         <!-- ==================== PANEL MAPA 1 (IZQUIERDO / SUPERIOR) ==================== -->
-        <section id="panelMap1" class="relative flex-1 w-full h-full border-r border-slate-800 transition-all duration-300 overflow-hidden">
+        <section id="panelMap1" class="relative flex-1 w-full h-full border-r border-slate-800 transition-all duration-300 overflow-hidden bg-slate-950">
             <!-- Contenedor Leaflet 1 -->
             <div id="map1" class="w-full h-full z-10"></div>
 
             <!-- Botón Discreto Permanente en Mapa 1 para Ocultar/Mostrar Controles (Modo Limpio) -->
-            <button id="btnCleanMap1" title="Ocultar/Mostrar controles del Mapa 1" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
+            <button id="btnCleanMap1" title="Ocultar/Mostrar controles del Mapa 1 (Modo Limpio)" class="absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
                 <i id="iconCleanMap1" class="fa-solid fa-eye-slash text-xs text-blue-400"></i>
             </button>
 
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Proyección Individual + Selector de Vista + Buscador Mapa 1 -->
-            <div id="uiTopOverlay1" class="absolute top-3 left-14 right-14 z-[500] flex flex-col gap-2 max-w-xl pointer-events-none transition-opacity duration-200">
-                <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit">
-                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <!-- Tarjeta Flotante Superior Adaptable: Identificador + Selector de Escala/Proyección + Capas + Buscador Mapa 1 -->
+            <div id="uiTopOverlay1" class="absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
+                <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
+                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
                         <span class="w-2 h-2 rounded-full bg-blue-400"></span>
-                        <span class="text-xs font-bold text-blue-200 tracking-wide">MAPA 1</span>
+                        <span class="text-[11px] font-bold text-blue-200 tracking-wide">MAPA 1</span>
                     </div>
 
-                    <!-- Selector de Proyección Individual para Mapa 1 -->
-                    <select id="projSelect1" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer" title="Proyección cartográfica del Mapa 1">
-                        <option value="mercator">Mercator (Estándar)</option>
-                        <option value="equal_area">Área Eq. (Gall-Peters)</option>
-                        <option value="plate_carree">Plate Carrée (4326)</option>
+                    <!-- Selector de Escala / Proyección Individual para Mapa 1 -->
+                    <select id="projSelect1" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-[11px] rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer" title="Modo de proyección y escala del Mapa 1">
+                        <option value="mercator" selected>Mercator (Estándar)</option>
+                        <option value="true_size">Tamaño Real (Escala cos lat)</option>
+                        <option value="gall_peters">Gall-Peters (Área Equivalente)</option>
                     </select>
 
                     <!-- Botones de selección de capa (Google Maps) -->
-                    <div class="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="1">
-                        <button data-layer="streets" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition bg-blue-600 text-white shadow">
+                    <div class="flex flex-wrap items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="1">
+                        <button data-layer="streets" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition bg-blue-600 text-white shadow">
                             Calles
                         </button>
-                        <button data-layer="satellite" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                        <button data-layer="satellite" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">
                             Satélite
                         </button>
-                        <button data-layer="hybrid" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                        <button data-layer="hybrid" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">
                             Híbrido
                         </button>
-                        <button data-layer="terrain" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                        <button data-layer="terrain" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">
                             Terreno
                         </button>
                     </div>
@@ -324,46 +333,44 @@
                 <!-- Buscador Independiente Mapa 1 -->
                 <div class="relative w-full max-w-sm pointer-events-auto">
                     <form id="searchForm1" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-blue-500 rounded-xl shadow-xl overflow-hidden transition">
-                        <span class="pl-3 pr-2 text-blue-400 text-xs">
+                        <span class="pl-2.5 pr-1.5 text-blue-400 text-xs">
                             <i id="searchIcon1" class="fa-solid fa-magnifying-glass"></i>
                         </span>
                         <input
                             id="searchInput1"
                             type="text"
                             autocomplete="off"
-                            placeholder="Buscar lugar, dirección o coords en Mapa 1..."
-                            class="w-full bg-transparent py-2 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
+                            placeholder="Buscar lugar, país o coords en Mapa 1..."
+                            class="w-full bg-transparent py-1.5 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
                         />
                         <button
                             type="button"
                             id="btnClearSearch1"
                             title="Limpiar búsqueda y marcador"
-                            class="hidden px-2 py-1.5 text-slate-400 hover:text-rose-400 text-xs transition"
+                            class="hidden px-2 py-1 text-slate-400 hover:text-rose-400 text-xs transition"
                         >
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                         <button
                             type="submit"
-                            class="px-3 py-2 bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-semibold transition border-l border-slate-700/80"
+                            class="px-2.5 py-1.5 bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-semibold transition border-l border-slate-700/80"
                         >
                             Ir
                         </button>
                     </form>
 
                     <!-- Desplegable de resultados Mapa 1 -->
-                    <div id="searchResults1" class="hidden absolute left-0 right-0 mt-1.5 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
+                    <div id="searchResults1" class="hidden absolute left-0 right-0 mt-1 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
                 </div>
             </div>
 
             <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 1) -->
-            <div id="uiCompassOverlay1" class="absolute top-28 right-3 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
-                <!-- Botón Rosa de los Vientos / Norte -->
+            <div id="uiCompassOverlay1" class="absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
                 <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
-                    <button id="btnResetNorth1" title="Clic para restablecer el Norte a 0° (o arrastra el mapa con clic derecho / Shift+Arrastrar)" class="relative w-10 h-10 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
+                    <button id="btnResetNorth1" title="Clic para restablecer el Norte a 0° (o arrastra el mapa con clic derecho)" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
                         <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
-                        <!-- Aguja de la brújula que gira dinámicamente -->
-                        <div id="compassNeedle1" class="w-6 h-6 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
-                            <svg viewBox="0 0 24 24" class="w-5 h-5">
+                        <div id="compassNeedle1" class="w-5 h-5 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4">
                                 <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
                                 <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
                             </svg>
@@ -389,55 +396,56 @@
                         <button data-map="1" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
                     </div>
                     <p class="text-[10px] text-slate-400 leading-tight">
-                        <i class="fa-solid fa-computer-mouse text-blue-400 mr-1"></i>Usa <strong>Clic derecho + arrastrar</strong> o <strong>Shift + Alt + arrastrar</strong> para girar libremente.
+                        <i class="fa-solid fa-computer-mouse text-blue-400 mr-1"></i>Usa <strong>Clic derecho + arrastrar</strong> para girar el Norte.
                     </p>
                 </div>
             </div>
 
-            <!-- Barra inferior de coordenadas del Mapa 1 -->
-            <div id="uiCoordsOverlay1" class="absolute bottom-3 left-3 z-[500] pointer-events-none hidden sm:flex items-center gap-2 bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
+            <!-- Barra inferior de coordenadas e indicador de distorsión del Mapa 1 -->
+            <div id="uiCoordsOverlay1" class="absolute bottom-2.5 left-2.5 z-[500] pointer-events-none hidden sm:flex flex-wrap items-center gap-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
                 <i class="fa-solid fa-compass text-blue-400"></i>
                 <span id="coordsMap1">40.3280, -3.7645</span>
+                <span id="scaleBadgeMap1" class="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px]">Mercator ×1.31</span>
             </div>
         </section>
 
         <!-- ==================== PANEL MAPA 2 (DERECHO / INFERIOR) ==================== -->
-        <section id="panelMap2" class="relative flex-1 w-full h-full transition-all duration-300 overflow-hidden">
+        <section id="panelMap2" class="relative flex-1 w-full h-full transition-all duration-300 overflow-hidden bg-slate-950">
             <!-- Contenedor Leaflet 2 -->
             <div id="map2" class="w-full h-full z-10"></div>
 
             <!-- Botón Discreto Permanente en Mapa 2 para Ocultar/Mostrar Controles (Modo Limpio) -->
-            <button id="btnCleanMap2" title="Ocultar/Mostrar controles del Mapa 2" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
+            <button id="btnCleanMap2" title="Ocultar/Mostrar controles del Mapa 2 (Modo Limpio)" class="absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
                 <i id="iconCleanMap2" class="fa-solid fa-eye-slash text-xs text-emerald-400"></i>
             </button>
 
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Proyección Individual + Selector de Vista + Buscador Mapa 2 -->
-            <div id="uiTopOverlay2" class="absolute top-3 left-14 right-14 z-[500] flex flex-col gap-2 max-w-xl pointer-events-none transition-opacity duration-200">
-                <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit">
-                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+            <!-- Tarjeta Flotante Superior Adaptable: Identificador + Selector de Escala/Proyección + Capas + Buscador Mapa 2 -->
+            <div id="uiTopOverlay2" class="absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
+                <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
+                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        <span class="text-xs font-bold text-emerald-200 tracking-wide">MAPA 2</span>
+                        <span class="text-[11px] font-bold text-emerald-200 tracking-wide">MAPA 2</span>
                     </div>
 
-                    <!-- Selector de Proyección Individual para Mapa 2 (Ideal para comparar Groenlandia Mercator vs Gall-Peters) -->
-                    <select id="projSelect2" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-emerald-500 transition cursor-pointer" title="Proyección cartográfica del Mapa 2">
+                    <!-- Selector de Escala / Proyección Individual para Mapa 2 -->
+                    <select id="projSelect2" class="bg-slate-950/90 border border-slate-700 text-emerald-300 text-[11px] rounded-lg px-2 py-1 font-semibold focus:outline-none focus:border-emerald-500 transition cursor-pointer" title="Modo de proyección y escala del Mapa 2">
                         <option value="mercator">Mercator (Estándar)</option>
-                        <option value="equal_area" selected>Área Eq. (Gall-Peters)</option>
-                        <option value="plate_carree">Plate Carrée (4326)</option>
+                        <option value="true_size" selected>Tamaño Real (Escala cos lat)</option>
+                        <option value="gall_peters">Gall-Peters (Área Equivalente)</option>
                     </select>
 
                     <!-- Botones de selección de capa (Google Maps) -->
-                    <div class="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="2">
-                        <button data-layer="streets" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                    <div class="flex flex-wrap items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="2">
+                        <button data-layer="streets" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">
                             Calles
                         </button>
-                        <button data-layer="satellite" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                        <button data-layer="satellite" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">
                             Satélite
                         </button>
-                        <button data-layer="hybrid" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition bg-emerald-600 text-white shadow">
+                        <button data-layer="hybrid" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition bg-emerald-600 text-white shadow">
                             Híbrido
                         </button>
-                        <button data-layer="terrain" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                        <button data-layer="terrain" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">
                             Terreno
                         </button>
                     </div>
@@ -446,46 +454,44 @@
                 <!-- Buscador Independiente Mapa 2 -->
                 <div class="relative w-full max-w-sm pointer-events-auto">
                     <form id="searchForm2" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-emerald-500 rounded-xl shadow-xl overflow-hidden transition">
-                        <span class="pl-3 pr-2 text-emerald-400 text-xs">
+                        <span class="pl-2.5 pr-1.5 text-emerald-400 text-xs">
                             <i id="searchIcon2" class="fa-solid fa-magnifying-glass"></i>
                         </span>
                         <input
                             id="searchInput2"
                             type="text"
                             autocomplete="off"
-                            placeholder="Buscar lugar, dirección o coords en Mapa 2..."
-                            class="w-full bg-transparent py-2 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
+                            placeholder="Buscar lugar, país o coords en Mapa 2..."
+                            class="w-full bg-transparent py-1.5 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
                         />
                         <button
                             type="button"
                             id="btnClearSearch2"
                             title="Limpiar búsqueda y marcador"
-                            class="hidden px-2 py-1.5 text-slate-400 hover:text-rose-400 text-xs transition"
+                            class="hidden px-2 py-1 text-slate-400 hover:text-rose-400 text-xs transition"
                         >
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                         <button
                             type="submit"
-                            class="px-3 py-2 bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold transition border-l border-slate-700/80"
+                            class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold transition border-l border-slate-700/80"
                         >
                             Ir
                         </button>
                     </form>
 
                     <!-- Desplegable de resultados Mapa 2 -->
-                    <div id="searchResults2" class="hidden absolute left-0 right-0 mt-1.5 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
+                    <div id="searchResults2" class="hidden absolute left-0 right-0 mt-1 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
                 </div>
             </div>
 
             <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 2) -->
-            <div id="uiCompassOverlay2" class="absolute top-28 right-3 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
-                <!-- Botón Rosa de los Vientos / Norte -->
+            <div id="uiCompassOverlay2" class="absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
                 <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
-                    <button id="btnResetNorth2" title="Clic para restablecer el Norte a 0° (o arrastra el mapa con clic derecho / Shift+Arrastrar)" class="relative w-10 h-10 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
+                    <button id="btnResetNorth2" title="Clic para restablecer el Norte a 0° (o arrastra el mapa con clic derecho)" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
                         <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
-                        <!-- Aguja de la brújula que gira dinámicamente -->
-                        <div id="compassNeedle2" class="w-6 h-6 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
-                            <svg viewBox="0 0 24 24" class="w-5 h-5">
+                        <div id="compassNeedle2" class="w-5 h-5 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4">
                                 <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
                                 <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
                             </svg>
@@ -511,15 +517,16 @@
                         <button data-map="2" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
                     </div>
                     <p class="text-[10px] text-slate-400 leading-tight">
-                        <i class="fa-solid fa-computer-mouse text-emerald-400 mr-1"></i>Usa <strong>Clic derecho + arrastrar</strong> o <strong>Shift + Alt + arrastrar</strong> para girar libremente.
+                        <i class="fa-solid fa-computer-mouse text-emerald-400 mr-1"></i>Usa <strong>Clic derecho + arrastrar</strong> para girar el Norte.
                     </p>
                 </div>
             </div>
 
-            <!-- Barra inferior de coordenadas del Mapa 2 -->
-            <div id="uiCoordsOverlay2" class="absolute bottom-3 left-3 z-[500] pointer-events-none hidden sm:flex items-center gap-2 bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
+            <!-- Barra inferior de coordenadas e indicador de escala real del Mapa 2 -->
+            <div id="uiCoordsOverlay2" class="absolute bottom-2.5 left-2.5 z-[500] pointer-events-none hidden sm:flex flex-wrap items-center gap-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
                 <i class="fa-solid fa-compass text-emerald-400"></i>
                 <span id="coordsMap2">40.3280, -3.7645</span>
+                <span id="scaleBadgeMap2" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">Escala Real (1:1)</span>
             </div>
         </section>
 
@@ -532,7 +539,7 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-rose-400">Medidor de Distancia Activo</span>
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-rose-400">Medidor de Distancia Real</span>
                             <span id="measureSegmentsCount" class="text-[11px] font-mono text-slate-400">(0 puntos)</span>
                         </div>
                         <div class="flex items-baseline gap-2 mt-0.5">
@@ -557,44 +564,41 @@
                 </div>
             </div>
             <p class="text-[11px] text-slate-400 mt-2 border-t border-slate-800/80 pt-1.5 flex items-center justify-between">
-                <span><i class="fa-solid fa-hand-pointer text-rose-400 mr-1"></i> Haz clic en <strong>cualquiera de los dos mapas</strong> para trazar puntos sincronizados.</span>
+                <span><i class="fa-solid fa-hand-pointer text-rose-400 mr-1"></i> Haz clic en <strong>cualquiera de los dos mapas</strong> para medir distancias geodésicas.</span>
                 <span class="hidden sm:inline font-mono text-[10px] text-slate-500">ESC para salir</span>
             </p>
         </div>
 
         <!-- Notificación Toast no intrusiva -->
-        <div id="toastNotification" class="pointer-events-none opacity-0 transition-all duration-300 transform translate-y-2 fixed top-16 left-1/2 -translate-x-1/2 z-[1200] bg-slate-900/95 border border-slate-700 text-slate-100 px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
-            <i class="fa-solid fa-circle-info text-blue-400"></i>
+        <div id="toastNotification" class="pointer-events-none opacity-0 transition-all duration-300 transform translate-y-2 fixed top-20 left-1/2 -translate-x-1/2 z-[1200] bg-slate-900/95 border border-slate-700 text-slate-100 px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
+            <i class="fa-solid fa-circle-info text-[#00E5FF]"></i>
             <span id="toastMessage">Sincronización activa</span>
         </div>
     </main>
 
     <script>
         /**************************************************************************
-         * CONFIGURACIÓN INICIAL Y PARÁMETROS DE VENTANA
+         * CONFIGURACIÓN INICIAL Y ESTADO DE COMPARAMAPAS
          **************************************************************************/
         const urlParams = new URLSearchParams(window.location.search);
-        const windowRole = urlParams.get('role') || 'dual'; // 'dual' | 'popup_map2'
+        const INITIAL_CENTER = [40.3280, -3.7645]; // Leganés / Madrid
+        const INITIAL_ZOOM = 13.5;
 
-        // Coordenadas iniciales: Leganés / Sur de Madrid
-        const INITIAL_CENTER = [40.3280, -3.7645];
-        const INITIAL_ZOOM = 14;
-
-        // Estado global de la aplicación
         const state = {
-            syncZoom: true,       // Zoom sincronizado activo por defecto
-            syncPan: false,       // Desplazamiento (pan relativo) sincronizado opcional
-            syncBearing: false,   // Sincronización de giro (Norte) opcional
-            splitDirection: 'vertical', // 'vertical' (Lado a Lado) | 'horizontal' (Arriba y Abajo)
-            cleanMode: { 1: false, 2: false }, // Ocultar UI en cada mapa
-            isMeasuring: false,   // Modo medidor de distancia
-            measurePoints: [],    // Lista de objetos { lat, lng }
-            isProgrammaticMove: false, // Bandera para evitar bucles infinitos de eventos
-            externalPopupRef: null,    // Referencia a la ventana emergente abierta
+            baseZoom: INITIAL_ZOOM,     // Nivel de zoom ecuatorial de referencia
+            syncZoom: true,             // Zoom sincronizado activo por defecto
+            syncPan: false,             // Desplazamiento relativo sincronizado opcional
+            syncBearing: false,         // Sincronización de giro opcional
+            splitDirection: 'vertical', // 'vertical' | 'horizontal'
+            cleanMode: { 1: false, 2: false },
+            isMeasuring: false,
+            measurePoints: [],
+            isProgrammaticMove: false,
+            externalPopupRef: null,
             map1LayerType: 'streets',
             map2LayerType: 'hybrid',
-            map1Proj: 'mercator',
-            map2Proj: 'equal_area',
+            map1Proj: 'mercator',       // 'mercator' | 'true_size' | 'gall_peters'
+            map2Proj: 'true_size',      // Por defecto Mapa 2 corrige la distorsión de tamaño
             map1Bearing: 0,
             map2Bearing: 0,
             lastCenter1: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
@@ -602,34 +606,85 @@
             lastSearchResults: { 1: [], 2: [] }
         };
 
-        // Canal de comunicación entre ventanas del navegador (BroadcastChannel API)
-        const syncChannel = new BroadcastChannel('geosync_dual_maps_channel_v1');
+        const syncChannel = new BroadcastChannel('comparamapas_sync_channel_v2');
 
         /**************************************************************************
-         * DEFINICIÓN DE CRS (PROYECCIONES CARTOGRÁFICAS CON PROJ4)
+         * CÁLCULO DE COMPENSACIÓN DE TAMAÑO REAL Y GALL-PETERS SOBRE GOOGLE MAPS
+         * ------------------------------------------------------------------------
+         * En Web Mercator, cualquier objeto a latitud φ se agranda linealmente
+         * por un factor de 1 / cos(φ) y en área por 1 / cos²(φ).
+         * Ejemplo: Groenlandia (71.5°N) -> cos(71.5°) = 0.317 -> ¡3.15x más grande
+         * linealmente y 10x más grande en área que en la realidad!
+         *
+         * Para mostrar Google Maps (que sirve teselas en EPSG:3857) a TAMAÑO REAL:
+         * Aplicamos zoom fraccional continuo (zoomSnap: 0) compensando exactamente
+         * Δzoom = log2(cos(φ)). Así 1 píxel en pantalla representa los mismos
+         * kilómetros reales sin importar si miras el Ecuador, España o Groenlandia.
          **************************************************************************/
-        proj4.defs("EPSG:6933", "+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs");
-        proj4.defs("EPSG:4087", "+proj=eqc +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs");
+        function getLatitudeCosine(lat) {
+            const clampedLat = Math.max(-82, Math.min(82, Math.abs(lat)));
+            return Math.cos(clampedLat * Math.PI / 180);
+        }
 
-        const crsMercator = L.CRS.EPSG3857;
-        const crsEqualArea = new L.Proj.CRS('EPSG:6933',
-            '+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
-            {
-                resolutions: [
-                    65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5
-                ],
-                bounds: L.bounds([-20037508.34, -15496570.74], [20037508.34, 15496570.74])
-            }
-        );
-        const crsPlateCarree = L.CRS.EPSG4326;
+        function getZoomOffsetForMode(projMode, lat) {
+            if (projMode === 'mercator') return 0;
+            const cosLat = getLatitudeCosine(lat);
+            // En 'true_size' y 'gall_peters' reducimos el zoom en log2(cos(lat))
+            // para eliminar el inflado artificial de Mercator en latitudes altas
+            return Math.log2(cosLat);
+        }
 
-        function getCRSForProjection(projKey) {
-            switch(projKey) {
-                case 'equal_area': return crsEqualArea;
-                case 'plate_carree': return crsPlateCarree;
-                case 'mercator':
-                default: return crsMercator;
+        function computeEffectiveMapZoom(baseZoom, projMode, lat) {
+            const rawZoom = baseZoom + getZoomOffsetForMode(projMode, lat);
+            return Math.max(1.5, Math.min(20, rawZoom));
+        }
+
+        function computeBaseZoomFromMap(mapZoom, projMode, lat) {
+            return mapZoom - getZoomOffsetForMode(projMode, lat);
+        }
+
+        function applyGallPetersAspectTransform(mapNum) {
+            const projMode = mapNum === 1 ? state.map1Proj : state.map2Proj;
+            const mapInstance = mapNum === 1 ? map1 : map2;
+            const containerEl = document.getElementById(`map${mapNum}`);
+            if (!containerEl || !mapInstance) return;
+
+            if (projMode === 'gall_peters') {
+                // Gall-Peters comprime verticalmente las latitudes altas según cos²(φ) / cos²(45°)
+                const lat = mapInstance.getCenter().lat;
+                const cosLat = getLatitudeCosine(lat);
+                // Escala vertical suave representativa de la proyección cilíndrica equivalente
+                const scaleY = Math.max(0.48, Math.min(1.15, cosLat * 1.15));
+                const scaleX = Math.min(1.35, 1 / Math.sqrt(scaleY));
+                containerEl.style.transform = `scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`;
+            } else {
+                containerEl.style.transform = 'scale(1, 1)';
             }
+        }
+
+        function updateScaleBadges() {
+            [1, 2].forEach(num => {
+                const mapInstance = num === 1 ? map1 : map2;
+                const projMode = num === 1 ? state.map1Proj : state.map2Proj;
+                const badgeEl = document.getElementById(`scaleBadgeMap${num}`);
+                if (!badgeEl) return;
+
+                const lat = mapInstance.getCenter().lat;
+                const cosLat = getLatitudeCosine(lat);
+                const linearInflation = (1 / cosLat).toFixed(2);
+                const areaInflation = (1 / (cosLat * cosLat)).toFixed(1);
+
+                if (projMode === 'mercator') {
+                    badgeEl.className = 'px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px]';
+                    badgeEl.textContent = `Distorsión Mercator: ×${linearInflation} (Área ×${areaInflation})`;
+                } else if (projMode === 'true_size') {
+                    badgeEl.className = 'px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]';
+                    badgeEl.textContent = `Tamaño Real 1:1 (Corregido ÷${linearInflation})`;
+                } else {
+                    badgeEl.className = 'px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px]';
+                    badgeEl.textContent = `Gall-Peters Área Eq. (÷${areaInflation} área)`;
+                }
+            });
         }
 
         /**************************************************************************
@@ -646,34 +701,35 @@
 
             return L.tileLayer(`https://{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}&hl=es`, {
                 maxZoom: 21,
+                minZoom: 1,
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
                 attribution: '&copy; Google Maps'
             });
         }
 
         /**************************************************************************
-         * INICIALIZACIÓN DE LOS DOS MAPAS LEAFLET CON SOPORTE DE PROYECCIÓN Y ROTACIÓN
+         * INICIALIZACIÓN DE LOS DOS MAPAS LEAFLET (ZOOM FRACCIONAL CONTINUO)
          **************************************************************************/
-        let map1 = L.map('map1', {
+        const map1 = L.map('map1', {
             center: INITIAL_CENTER,
-            zoom: INITIAL_ZOOM,
-            crs: getCRSForProjection(state.map1Proj),
+            zoom: computeEffectiveMapZoom(INITIAL_ZOOM, state.map1Proj, INITIAL_CENTER[0]),
             zoomControl: false,
-            zoomSnap: 0.5,
+            zoomSnap: 0,       // Permite ajuste exacto de escala cos(lat) sin saltos bruscos
             zoomDelta: 0.5,
+            wheelPxPerZoomLevel: 90,
             rotate: true,
             bearing: 0,
             touchRotate: true,
             shiftKeyRotate: true
         });
 
-        let map2 = L.map('map2', {
+        const map2 = L.map('map2', {
             center: INITIAL_CENTER,
-            zoom: INITIAL_ZOOM,
-            crs: getCRSForProjection(state.map2Proj),
+            zoom: computeEffectiveMapZoom(INITIAL_ZOOM, state.map2Proj, INITIAL_CENTER[0]),
             zoomControl: false,
-            zoomSnap: 0.5,
+            zoomSnap: 0,       // Permite ajuste exacto de escala cos(lat)
             zoomDelta: 0.5,
+            wheelPxPerZoomLevel: 90,
             rotate: true,
             bearing: 0,
             touchRotate: true,
@@ -695,63 +751,30 @@
         let searchMarker1 = null;
         let searchMarker2 = null;
 
+        updateScaleBadges();
+
         /**************************************************************************
-         * FUNCIÓN PARA CAMBIAR PROYECCIÓN DE CADA MAPA DINÁMICAMENTE
+         * CAMBIO DE MODO DE ESCALA / PROYECCIÓN (MERCATOR, TAMAÑO REAL, GALL-PETERS)
          **************************************************************************/
         function setMapProjection(mapNum, projKey, broadcast = true) {
             const targetMap = mapNum === 1 ? map1 : map2;
-            const currentCenter = targetMap.getCenter();
-            const currentZoom = targetMap.getZoom();
-            const currentBearing = mapNum === 1 ? state.map1Bearing : state.map2Bearing;
-            const tileType = mapNum === 1 ? state.map1LayerType : state.map2LayerType;
-
             if (mapNum === 1) state.map1Proj = projKey;
             else state.map2Proj = projKey;
 
             const selectEl = document.getElementById(`projSelect${mapNum}`);
             if (selectEl && selectEl.value !== projKey) selectEl.value = projKey;
 
-            targetMap.remove();
+            // Recalcular el zoom efectivo para ese mapa según su latitud actual y state.baseZoom
+            state.isProgrammaticMove = true;
+            const c = targetMap.getCenter();
+            const newEffectiveZoom = computeEffectiveMapZoom(state.baseZoom, projKey, c.lat);
+            targetMap.setView(c, newEffectiveZoom, { animate: true });
+            applyGallPetersAspectTransform(mapNum);
+            updateScaleBadges();
 
-            const newCrs = getCRSForProjection(projKey);
-            const newMapConfig = {
-                center: [currentCenter.lat, currentCenter.lng],
-                zoom: currentZoom,
-                crs: newCrs,
-                zoomControl: false,
-                zoomSnap: 0.5,
-                zoomDelta: 0.5,
-                rotate: true,
-                bearing: currentBearing,
-                touchRotate: true,
-                shiftKeyRotate: true
-            };
-
-            const newMapInstance = L.map(`map${mapNum}`, newMapConfig);
-            L.control.zoom({ position: 'topright' }).addTo(newMapInstance);
-            L.control.scale({ imperial: false, position: 'bottomright' }).addTo(newMapInstance);
-
-            const newTileLayer = createGoogleTileLayer(tileType).addTo(newMapInstance);
-            const newMeasureGroup = L.layerGroup().addTo(newMapInstance);
-
-            if (mapNum === 1) {
-                map1 = newMapInstance;
-                activeTileLayer1 = newTileLayer;
-                map1.on('zoom move', () => handleMapSync(map1, map2, 'map1'));
-                map1.on('rotate', () => handleMapRotateEvent(1));
-                map1.on('click', (e) => { if (state.isMeasuring) addMeasurementPoint(e.latlng, true); });
-                enableRightClickDragRotation(map1, 1);
-            } else {
-                map2 = newMapInstance;
-                activeTileLayer2 = newTileLayer;
-                map2.on('zoom move', () => handleMapSync(map2, map1, 'map2'));
-                map2.on('rotate', () => handleMapRotateEvent(2));
-                map2.on('click', (e) => { if (state.isMeasuring) addMeasurementPoint(e.latlng, true); });
-                enableRightClickDragRotation(map2, 2);
-            }
-
-            updateMeasurementUI();
-            applyMapBearing(mapNum, currentBearing, false, false);
+            setTimeout(() => {
+                state.isProgrammaticMove = false;
+            }, 250);
 
             if (broadcast) {
                 syncChannel.postMessage({
@@ -761,12 +784,12 @@
                 });
             }
 
-            const projNames = {
-                'mercator': 'Web Mercator (Estándar)',
-                'equal_area': 'Gall-Peters (Área Equivalente)',
-                'plate_carree': 'Plate Carrée (4326)'
+            const modeLabels = {
+                mercator: 'Mercator (Estándar)',
+                true_size: 'Tamaño Real (Escala cos lat)',
+                gall_peters: 'Gall-Peters (Área Equivalente)'
             };
-            showToast(`Mapa ${mapNum} proyectado en ${projNames[projKey] || projKey}`);
+            showToast(`Mapa ${mapNum}: ${modeLabels[projKey] || projKey}`);
         }
 
         document.getElementById('projSelect1').addEventListener('change', (e) => {
@@ -776,6 +799,7 @@
             setMapProjection(2, e.target.value, true);
         });
 
+        // Menú desplegable de preajustes globales en la barra superior
         const globalProjBtn = document.getElementById('btnGlobalProjectionMenu');
         const globalProjDropdown = document.getElementById('globalProjectionDropdown');
 
@@ -790,11 +814,25 @@
 
         document.querySelectorAll('.proj-option-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const proj = btn.dataset.proj;
-                setMapProjection(1, proj, true);
-                setMapProjection(2, proj, true);
-                document.getElementById('globalProjectionLabel').textContent = btn.querySelector('.font-semibold').textContent.split(' ')[0] + ' (...)';
-                
+                const preset = btn.dataset.preset;
+                if (preset === 'compare_real') {
+                    setMapProjection(1, 'mercator', true);
+                    setMapProjection(2, 'true_size', true);
+                    document.getElementById('globalProjectionLabel').textContent = 'Mercator vs Tamaño Real';
+                } else if (preset === 'both_real') {
+                    setMapProjection(1, 'true_size', true);
+                    setMapProjection(2, 'true_size', true);
+                    document.getElementById('globalProjectionLabel').textContent = 'Ambos: Tamaño Real';
+                } else if (preset === 'compare_gall') {
+                    setMapProjection(1, 'mercator', true);
+                    setMapProjection(2, 'gall_peters', true);
+                    document.getElementById('globalProjectionLabel').textContent = 'Mercator vs Gall-Peters';
+                } else if (preset === 'both_mercator') {
+                    setMapProjection(1, 'mercator', true);
+                    setMapProjection(2, 'mercator', true);
+                    document.getElementById('globalProjectionLabel').textContent = 'Ambos: Mercator';
+                }
+
                 document.querySelectorAll('.proj-option-btn').forEach(b => {
                     b.classList.remove('bg-slate-800/60');
                     b.querySelector('i').classList.add('hidden');
@@ -803,6 +841,39 @@
                 btn.querySelector('i').classList.remove('hidden');
                 globalProjDropdown.classList.add('hidden');
             });
+        });
+
+        // Botón rápido "Ver Groenlandia Real" para comprobar el tamaño real de Groenlandia al instante
+        document.getElementById('btnGreenlandDemo').addEventListener('click', () => {
+            const greenlandCenter = [71.7069, -42.6043];
+            state.baseZoom = 4.3;
+            state.map1Proj = 'mercator';
+            state.map2Proj = 'true_size';
+            document.getElementById('projSelect1').value = 'mercator';
+            document.getElementById('projSelect2').value = 'true_size';
+            document.getElementById('globalProjectionLabel').textContent = 'Mercator vs Tamaño Real';
+
+            state.isProgrammaticMove = true;
+            const z1 = computeEffectiveMapZoom(state.baseZoom, 'mercator', greenlandCenter[0]);
+            const z2 = computeEffectiveMapZoom(state.baseZoom, 'true_size', greenlandCenter[0]);
+
+            map1.setView(greenlandCenter, z1, { animate: true });
+            map2.setView(greenlandCenter, z2, { animate: true });
+
+            state.lastCenter1 = { lat: greenlandCenter[0], lng: greenlandCenter[1] };
+            state.lastCenter2 = { lat: greenlandCenter[0], lng: greenlandCenter[1] };
+
+            applyGallPetersAspectTransform(1);
+            applyGallPetersAspectTransform(2);
+            updateZoomBadge(state.baseZoom);
+            updateCoordsDisplay();
+            updateScaleBadges();
+
+            setTimeout(() => {
+                state.isProgrammaticMove = false;
+            }, 300);
+
+            showToast('Groenlandia: Mercator (Izq.) vs Tamaño Real sin distorsión (Der.)');
         });
 
         /**************************************************************************
@@ -959,7 +1030,7 @@
         });
 
         /**************************************************************************
-         * BUSCADOR DE UBICACIONES INDEPENDIENTE (CON SOPORTE DE PROYECCIÓN)
+         * BUSCADOR DE UBICACIONES INDEPENDIENTE (RESPETANDO ESCALA REAL)
          **************************************************************************/
         function parseCoordinatesQuery(query) {
             const match = query.trim().match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/);
@@ -989,6 +1060,9 @@
         function selectSearchResult(mapNum, item, broadcast = true) {
             const targetMap = mapNum === 1 ? map1 : map2;
             const otherMap = mapNum === 1 ? map2 : map1;
+            const targetProj = mapNum === 1 ? state.map1Proj : state.map2Proj;
+            const otherProj = mapNum === 1 ? state.map2Proj : state.map1Proj;
+
             const resultsBox = document.getElementById(`searchResults${mapNum}`);
             const inputEl = document.getElementById(`searchInput${mapNum}`);
             const clearBtn = document.getElementById(`btnClearSearch${mapNum}`);
@@ -1004,20 +1078,25 @@
             inputEl.value = shortName;
             clearBtn.classList.remove('hidden');
 
-            let targetZoom = 16;
+            let desiredBaseZoom = 14.5;
             if (item.boundingbox && item.boundingbox.length === 4) {
                 const south = parseFloat(item.boundingbox[0]);
                 const north = parseFloat(item.boundingbox[1]);
                 const diff = Math.abs(north - south);
-                if (diff > 2) targetZoom = 9;
-                else if (diff > 0.5) targetZoom = 12;
-                else if (diff > 0.08) targetZoom = 14;
-                else targetZoom = 16;
+                if (diff > 15) desiredBaseZoom = 4.5;
+                else if (diff > 5) desiredBaseZoom = 6;
+                else if (diff > 1.5) desiredBaseZoom = 8.5;
+                else if (diff > 0.4) desiredBaseZoom = 11.5;
+                else if (diff > 0.08) desiredBaseZoom = 13.5;
+                else desiredBaseZoom = 15.5;
             }
+
+            state.baseZoom = desiredBaseZoom;
+            const effectiveTargetZoom = computeEffectiveMapZoom(state.baseZoom, targetProj, lat);
 
             state.isProgrammaticMove = true;
             targetMap.stop();
-            targetMap.setView([lat, lng], targetZoom, { animate: false });
+            targetMap.setView([lat, lng], effectiveTargetZoom, { animate: false });
 
             if (mapNum === 1) {
                 if (searchMarker1) map1.removeLayer(searchMarker1);
@@ -1035,14 +1114,19 @@
 
             otherMap.stop();
             if (state.syncZoom) {
-                otherMap.setZoom(targetZoom, { animate: false });
+                const otherLat = otherMap.getCenter().lat;
+                const effectiveOtherZoom = computeEffectiveMapZoom(state.baseZoom, otherProj, otherLat);
+                otherMap.setZoom(effectiveOtherZoom, { animate: false });
             }
 
             state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
             state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
 
-            updateZoomBadge(targetZoom);
+            applyGallPetersAspectTransform(1);
+            applyGallPetersAspectTransform(2);
+            updateZoomBadge(state.baseZoom);
             updateCoordsDisplay();
+            updateScaleBadges();
 
             setTimeout(() => {
                 state.isProgrammaticMove = false;
@@ -1053,7 +1137,7 @@
                     type: 'SEARCH_RESULT_SELECTED',
                     mapNum,
                     item: { lat, lon: lng, display_name: label, boundingbox: item.boundingbox },
-                    zoom: targetZoom,
+                    baseZoom: state.baseZoom,
                     syncZoom: state.syncZoom,
                     syncPan: state.syncPan
                 });
@@ -1209,7 +1293,7 @@
         });
 
         /**************************************************************************
-         * GESTIÓN DE CAPAS (CALLES, SATÉLITE, HÍBRIDO, TERRENO)
+         * GESTIÓN DE CAPAS DE GOOGLE MAPS
          **************************************************************************/
         function setMapLayer(mapNumber, layerType, broadcast = true) {
             if (mapNumber === 1) {
@@ -1249,7 +1333,7 @@
         });
 
         /**************************************************************************
-         * SINCRONIZACIÓN DE ZOOM Y PAN RELATIVO
+         * SINCRONIZACIÓN INTELIGENTE DE ZOOM (CON COMPENSACIÓN COS LAT) Y PAN RELATIVO
          **************************************************************************/
         function updateZoomBadge(zoomVal) {
             document.getElementById('zoomLevelDisplay').textContent = Number(zoomVal).toFixed(1);
@@ -1264,9 +1348,24 @@
 
         function handleMapSync(sourceMap, targetMap, sourceId) {
             updateCoordsDisplay();
-            const currentZoom = sourceMap.getZoom();
+            updateScaleBadges();
+
+            const sourceNum = sourceId === 'map1' ? 1 : 2;
+            const targetNum = sourceNum === 1 ? 2 : 1;
+            const sourceProj = sourceNum === 1 ? state.map1Proj : state.map2Proj;
+            const targetProj = targetNum === 1 ? state.map1Proj : state.map2Proj;
+
+            applyGallPetersAspectTransform(sourceNum);
+
+            if (state.isProgrammaticMove) return;
+            state.isProgrammaticMove = true;
+
             const currentCenter = sourceMap.getCenter();
-            updateZoomBadge(currentZoom);
+            const currentMapZoom = sourceMap.getZoom();
+
+            // Extraer el baseZoom ecuatorial a partir del zoom actual del mapa origen
+            state.baseZoom = computeBaseZoomFromMap(currentMapZoom, sourceProj, currentCenter.lat);
+            updateZoomBadge(state.baseZoom);
 
             const lastSourceCenter = sourceId === 'map1' ? state.lastCenter1 : state.lastCenter2;
             const dLat = currentCenter.lat - lastSourceCenter.lat;
@@ -1278,27 +1377,35 @@
                 state.lastCenter2 = { lat: currentCenter.lat, lng: currentCenter.lng };
             }
 
-            if (state.isProgrammaticMove) return;
-
-            state.isProgrammaticMove = true;
+            // Si el propio mapa origen está en modo Tamaño Real o Gall-Peters y se ha movido en latitud,
+            // ajustamos suavemente su zoom para mantener su escala métrica constante al desplazarse hacia los polos
+            if (sourceProj !== 'mercator' && Math.abs(dLat) > 0.001) {
+                const correctedSourceZoom = computeEffectiveMapZoom(state.baseZoom, sourceProj, currentCenter.lat);
+                if (Math.abs(correctedSourceZoom - currentMapZoom) > 0.005) {
+                    sourceMap.setZoom(correctedSourceZoom, { animate: false });
+                }
+            }
 
             const targetCenter = targetMap.getCenter();
-            const cosSource = Math.max(0.15, Math.cos(currentCenter.lat * Math.PI / 180));
-            const cosTarget = Math.max(0.15, Math.cos(targetCenter.lat * Math.PI / 180));
+            const cosSource = getLatitudeCosine(currentCenter.lat);
+            const cosTarget = getLatitudeCosine(targetCenter.lat);
             const adjustedDLng = dLng * (cosSource / cosTarget);
 
-            const nextTargetLat = Math.max(-85, Math.min(85, targetCenter.lat + dLat));
+            const nextTargetLat = Math.max(-84, Math.min(84, targetCenter.lat + dLat));
             const nextTargetLng = targetCenter.lng + adjustedDLng;
             const hasMoved = Math.abs(dLat) > 1e-9 || Math.abs(dLng) > 1e-9;
 
-            if (state.syncZoom && state.syncPan) {
-                const newPos = hasMoved ? [nextTargetLat, nextTargetLng] : [targetCenter.lat, targetCenter.lng];
-                targetMap.setView(newPos, currentZoom, { animate: false });
-            } else if (state.syncZoom) {
-                if (targetMap.getZoom() !== currentZoom) targetMap.setZoom(currentZoom, { animate: false });
-            } else if (state.syncPan && hasMoved) {
-                targetMap.setView([nextTargetLat, nextTargetLng], targetMap.getZoom(), { animate: false });
+            const finalTargetLat = (state.syncPan && hasMoved) ? nextTargetLat : targetCenter.lat;
+            const finalTargetLng = (state.syncPan && hasMoved) ? nextTargetLng : targetCenter.lng;
+            const targetEffectiveZoom = state.syncZoom
+                ? computeEffectiveMapZoom(state.baseZoom, targetProj, finalTargetLat)
+                : targetMap.getZoom();
+
+            if (state.syncZoom || (state.syncPan && hasMoved)) {
+                targetMap.setView([finalTargetLat, finalTargetLng], targetEffectiveZoom, { animate: false });
             }
+
+            applyGallPetersAspectTransform(targetNum);
 
             const updatedTargetCenter = targetMap.getCenter();
             if (sourceId === 'map1') {
@@ -1310,7 +1417,7 @@
             syncChannel.postMessage({
                 type: 'MAP_VIEW_CHANGE',
                 sourceId,
-                zoom: currentZoom,
+                baseZoom: state.baseZoom,
                 dLat,
                 dLng: adjustedDLng,
                 syncZoom: state.syncZoom,
@@ -1318,6 +1425,7 @@
             });
 
             updateCoordsDisplay();
+            updateScaleBadges();
 
             requestAnimationFrame(() => {
                 state.isProgrammaticMove = false;
@@ -1426,12 +1534,12 @@
             const container = document.getElementById('mapsGridContainer');
 
             if (state.isMeasuring) {
-                btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-rose-600 border-rose-500 text-white shadow-md shadow-rose-600/30';
+                btn.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-rose-600 border-rose-500 text-white shadow-md shadow-rose-600/30';
                 dock.classList.remove('hidden');
                 container.classList.add('measuring-cursor');
                 showToast('Modo medición activo');
             } else {
-                btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50';
+                btn.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50';
                 dock.classList.add('hidden');
                 container.classList.remove('measuring-cursor');
             }
@@ -1457,7 +1565,7 @@
             window._toastTimer = setTimeout(() => {
                 toast.classList.remove('opacity-100', 'translate-y-0');
                 toast.classList.add('opacity-0', 'translate-y-2');
-            }, 2600);
+            }, 2800);
         }
 
         function updateSyncButtonsUI() {
@@ -1469,26 +1577,26 @@
             const dotBearing = document.getElementById('dotSyncBearing');
 
             if (state.syncZoom) {
-                btnZoom.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/10';
+                btnZoom.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm';
                 dotZoom.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
             } else {
-                btnZoom.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-400';
+                btnZoom.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-400';
                 dotZoom.className = 'w-2 h-2 rounded-full bg-slate-600';
             }
 
             if (state.syncPan) {
-                btnPan.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-indigo-600/20 border-indigo-500/50 text-indigo-300 shadow-sm shadow-indigo-500/10';
+                btnPan.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-indigo-600/20 border-indigo-500/50 text-indigo-300 shadow-sm';
                 dotPan.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
             } else {
-                btnPan.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750';
+                btnPan.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750';
                 dotPan.className = 'w-2 h-2 rounded-full bg-slate-600';
             }
 
             if (state.syncBearing) {
-                btnBearing.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm shadow-amber-500/10';
+                btnBearing.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm';
                 dotBearing.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
             } else {
-                btnBearing.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750';
+                btnBearing.className = 'flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750';
                 dotBearing.className = 'w-2 h-2 rounded-full bg-slate-600';
             }
         }
@@ -1498,8 +1606,9 @@
             updateSyncButtonsUI();
             if (state.syncZoom) {
                 state.isProgrammaticMove = true;
-                map2.setZoom(map1.getZoom(), { animate: true });
-                state.isProgrammaticMove = false;
+                const z2 = computeEffectiveMapZoom(state.baseZoom, state.map2Proj, map2.getCenter().lat);
+                map2.setZoom(z2, { animate: true });
+                setTimeout(() => { state.isProgrammaticMove = false; }, 200);
                 showToast('Zoom sincronizado activado');
             } else {
                 showToast('Zoom sincronizado desactivado');
@@ -1512,7 +1621,7 @@
             state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
             state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
             updateSyncButtonsUI();
-            showToast(state.syncPan ? 'Posición sincronizada activa' : 'Posición independiente');
+            showToast(state.syncPan ? 'Posición sincronizada activa (desplazamiento relativo)' : 'Posición independiente');
             syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
         });
 
@@ -1526,13 +1635,18 @@
 
         document.getElementById('btnAlignNow').addEventListener('click', () => {
             state.isProgrammaticMove = true;
-            map2.setView(map1.getCenter(), map1.getZoom(), { animate: true });
+            const c1 = map1.getCenter();
+            const z2 = computeEffectiveMapZoom(state.baseZoom, state.map2Proj, c1.lat);
+            map2.setView(c1, z2, { animate: true });
             applyMapBearing(2, state.map1Bearing, false, false);
-            state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
-            state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
-            state.isProgrammaticMove = false;
-            syncChannel.postMessage({ type: 'FORCE_ALIGN', center: map1.getCenter(), zoom: map1.getZoom(), bearing: state.map1Bearing });
-            showToast('Mapas alineados');
+            applyGallPetersAspectTransform(2);
+            state.lastCenter1 = { lat: c1.lat, lng: c1.lng };
+            state.lastCenter2 = { lat: c1.lat, lng: c1.lng };
+            updateCoordsDisplay();
+            updateScaleBadges();
+            setTimeout(() => { state.isProgrammaticMove = false; }, 250);
+            syncChannel.postMessage({ type: 'FORCE_ALIGN', center: c1, baseZoom: state.baseZoom, bearing: state.map1Bearing });
+            showToast('Posición de ambos mapas igualada');
         });
 
         function setMapCleanMode(mapNum, isClean) {
@@ -1601,14 +1715,22 @@
         });
 
         document.getElementById('btnResetCenter').addEventListener('click', () => {
+            state.baseZoom = INITIAL_ZOOM;
             state.isProgrammaticMove = true;
-            map1.setView(INITIAL_CENTER, INITIAL_ZOOM, { animate: true });
-            map2.setView(INITIAL_CENTER, INITIAL_ZOOM, { animate: true });
+            const z1 = computeEffectiveMapZoom(state.baseZoom, state.map1Proj, INITIAL_CENTER[0]);
+            const z2 = computeEffectiveMapZoom(state.baseZoom, state.map2Proj, INITIAL_CENTER[0]);
+            map1.setView(INITIAL_CENTER, z1, { animate: true });
+            map2.setView(INITIAL_CENTER, z2, { animate: true });
             state.lastCenter1 = { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] };
             state.lastCenter2 = { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] };
-            state.isProgrammaticMove = false;
-            syncChannel.postMessage({ type: 'FORCE_ALIGN', center: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] }, zoom: INITIAL_ZOOM });
-            showToast('Centrado en Leganés / Madrid');
+            applyGallPetersAspectTransform(1);
+            applyGallPetersAspectTransform(2);
+            updateZoomBadge(state.baseZoom);
+            updateCoordsDisplay();
+            updateScaleBadges();
+            setTimeout(() => { state.isProgrammaticMove = false; }, 250);
+            syncChannel.postMessage({ type: 'FORCE_ALIGN', center: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] }, baseZoom: INITIAL_ZOOM });
+            showToast('Centrado en Madrid / Leganés');
         });
 
         document.getElementById('btnMeasureMode').addEventListener('click', () => toggleMeasureMode());
@@ -1634,7 +1756,7 @@
         }
 
         if (urlParams.get('role') === 'popup_map2') {
-            document.title = 'Mapa 2 (Ventana Sincronizada) - GeoSync Dual';
+            document.title = 'Mapa 2 (Ventana Sincronizada) - Comparamapas';
             document.getElementById('windowRoleBadge').classList.remove('hidden');
             document.getElementById('btnPopupWindow').classList.add('hidden');
             applySingleMapLayout(2);
@@ -1647,7 +1769,7 @@
                 state.externalPopupRef.close();
                 state.externalPopupRef = null;
                 applySingleMapLayout('both');
-                document.getElementById('popupBtnText').textContent = 'Abrir en 2ª Ventana';
+                document.getElementById('popupBtnText').textContent = '2ª Ventana';
                 return;
             }
 
@@ -1655,7 +1777,7 @@
             popupUrl.searchParams.set('role', 'popup_map2');
             const width = Math.min(900, window.screen.availWidth * 0.48);
             const height = Math.min(780, window.screen.availHeight * 0.85);
-            const popup = window.open(popupUrl.toString(), 'GeoSyncMap2Window', `width=${Math.round(width)},height=${Math.round(height)},resizable=yes`);
+            const popup = window.open(popupUrl.toString(), 'ComparamapasMap2Window', `width=${Math.round(width)},height=${Math.round(height)},resizable=yes`);
             if (popup) {
                 state.externalPopupRef = popup;
                 applySingleMapLayout(1);
@@ -1673,7 +1795,7 @@
                     syncChannel.postMessage({
                         type: 'INIT_STATE',
                         center: map1.getCenter(),
-                        zoom: map1.getZoom(),
+                        baseZoom: state.baseZoom,
                         syncZoom: state.syncZoom,
                         syncPan: state.syncPan,
                         map1LayerType: state.map1LayerType,
@@ -1687,19 +1809,20 @@
                 case 'POPUP_CLOSED':
                     state.externalPopupRef = null;
                     applySingleMapLayout('both');
-                    document.getElementById('popupBtnText').textContent = 'Abrir en 2ª Ventana';
+                    document.getElementById('popupBtnText').textContent = '2ª Ventana';
                     break;
                 case 'INIT_STATE':
                     state.syncZoom = data.syncZoom;
                     state.syncPan = data.syncPan;
+                    state.baseZoom = data.baseZoom || INITIAL_ZOOM;
                     updateSyncButtonsUI();
-                    if (data.map1Proj && data.map1Proj !== state.map1Proj) setMapProjection(1, data.map1Proj, false);
-                    if (data.map2Proj && data.map2Proj !== state.map2Proj) setMapProjection(2, data.map2Proj, false);
+                    if (data.map1Proj) setMapProjection(1, data.map1Proj, false);
+                    if (data.map2Proj) setMapProjection(2, data.map2Proj, false);
                     setMapLayer(1, data.map1LayerType, false);
                     setMapLayer(2, data.map2LayerType, false);
                     state.isProgrammaticMove = true;
-                    map1.setView(data.center, data.zoom, { animate: false });
-                    map2.setView(data.center, data.zoom, { animate: false });
+                    map1.setView(data.center, computeEffectiveMapZoom(state.baseZoom, state.map1Proj, data.center.lat), { animate: false });
+                    map2.setView(data.center, computeEffectiveMapZoom(state.baseZoom, state.map2Proj, data.center.lat), { animate: false });
                     state.isProgrammaticMove = false;
                     state.measurePoints = data.measurePoints || [];
                     updateMeasurementUI();
@@ -1710,35 +1833,41 @@
                     break;
                 case 'MAP_VIEW_CHANGE':
                     state.isProgrammaticMove = true;
+                    state.baseZoom = data.baseZoom || state.baseZoom;
                     [map1, map2].forEach((m, idx) => {
+                        const mapNum = idx + 1;
+                        const proj = mapNum === 1 ? state.map1Proj : state.map2Proj;
                         const c = m.getCenter();
-                        const nextLat = Math.max(-85, Math.min(85, c.lat + (data.dLat || 0)));
+                        const nextLat = Math.max(-84, Math.min(84, c.lat + (data.dLat || 0)));
                         const nextLng = c.lng + (data.dLng || 0);
                         const hasDelta = Math.abs(data.dLat || 0) > 1e-9 || Math.abs(data.dLng || 0) > 1e-9;
 
-                        if (data.syncZoom && data.syncPan) {
-                            m.setView(hasDelta ? [nextLat, nextLng] : [c.lat, c.lng], data.zoom, { animate: false });
-                        } else if (data.syncZoom) {
-                            if (m.getZoom() !== data.zoom) m.setZoom(data.zoom, { animate: false });
-                        } else if (data.syncPan && hasDelta) {
-                            m.setView([nextLat, nextLng], m.getZoom(), { animate: false });
+                        const finalLat = (data.syncPan && hasDelta) ? nextLat : c.lat;
+                        const finalLng = (data.syncPan && hasDelta) ? nextLng : c.lng;
+                        const effZoom = data.syncZoom ? computeEffectiveMapZoom(state.baseZoom, proj, finalLat) : m.getZoom();
+
+                        if (data.syncZoom || (data.syncPan && hasDelta)) {
+                            m.setView([finalLat, finalLng], effZoom, { animate: false });
                         }
+                        applyGallPetersAspectTransform(mapNum);
 
                         const updated = m.getCenter();
                         if (idx === 0) state.lastCenter1 = { lat: updated.lat, lng: updated.lng };
                         else state.lastCenter2 = { lat: updated.lat, lng: updated.lng };
                     });
-                    updateZoomBadge(data.zoom);
+                    updateZoomBadge(state.baseZoom);
                     updateCoordsDisplay();
+                    updateScaleBadges();
                     requestAnimationFrame(() => { state.isProgrammaticMove = false; });
                     break;
                 case 'FORCE_ALIGN':
                     state.isProgrammaticMove = true;
-                    map1.setView(data.center, data.zoom, { animate: true });
-                    map2.setView(data.center, data.zoom, { animate: true });
+                    state.baseZoom = data.baseZoom || state.baseZoom;
+                    map1.setView(data.center, computeEffectiveMapZoom(state.baseZoom, state.map1Proj, data.center.lat), { animate: true });
+                    map2.setView(data.center, computeEffectiveMapZoom(state.baseZoom, state.map2Proj, data.center.lat), { animate: true });
                     state.lastCenter1 = { lat: data.center.lat, lng: data.center.lng };
                     state.lastCenter2 = { lat: data.center.lat, lng: data.center.lng };
-                    state.isProgrammaticMove = false;
+                    setTimeout(() => { state.isProgrammaticMove = false; }, 250);
                     break;
                 case 'SYNC_SETTINGS':
                     state.syncZoom = data.syncZoom;
