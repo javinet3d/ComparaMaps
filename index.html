@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoSync Dual - Comparador y Medidor de Mapas</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Leaflet Rotate Plugin (Soporte nativo de rotación de vista / rumbo / Norte con coordenadas exactas) -->
+    <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos personalizados para marcadores y controles de Leaflet */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+
+        .leaflet-container {
+            background-color: #1e293b;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Personalización de controles de zoom de Leaflet */
+        .leaflet-control-zoom {
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 0.75rem !important;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        .leaflet-control-zoom a {
+            background-color: rgba(15, 23, 42, 0.88) !important;
+            backdrop-filter: blur(8px);
+            color: #f8fafc !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            width: 36px !important;
+            height: 36px !important;
+            line-height: 36px !important;
+            font-size: 16px !important;
+            transition: all 0.15s ease;
+        }
+
+        .leaflet-control-zoom a:hover {
+            background-color: rgba(59, 130, 246, 0.9) !important;
+            color: #ffffff !important;
+        }
+
+        /* Etiquetas de segmentos de distancia sobre el mapa */
+        .segment-tooltip {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(244, 63, 94, 0.6) !important;
+            color: #f8fafc !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            padding: 2px 6px !important;
+            border-radius: 6px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            white-space: nowrap;
+        }
+
+        .segment-tooltip::before {
+            display: none !important;
+        }
+
+        /* Cursor en modo medición */
+        .measuring-cursor .leaflet-container {
+            cursor: crosshair !important;
+        }
+
+        /* Animación sutil para el punto de medición */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        .measure-dot-pulse::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid #f43f5e;
+            animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        /* Ocultar el control de brújula por defecto de leaflet-rotate para usar nuestra brújula avanzada */
+        .leaflet-control-rotate {
+            display: none !important;
+        }
+
+        /* Estilo de barra deslizante de rotación */
+        input[type=range].bearing-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type=range].bearing-slider::-webkit-slider-runnable-track {
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(51, 65, 85, 0.9);
+        }
+        input[type=range].bearing-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid #ffffff;
+            margin-top: -4.5px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Ocultar controles nativos de Leaflet cuando un mapa está en Modo Limpio */
+        .map-ui-hidden .leaflet-control-container {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="text-slate-100 flex flex-col h-screen select-none">
+
+    <!-- BARRA DE HERRAMIENTAS SUPERIOR -->
+    <header id="mainHeader" class="h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-5 flex items-center justify-between gap-2 z-[1000] shrink-0 shadow-lg transition-all duration-200">
+        <!-- Marca y Ubicación rápida -->
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-layer-group text-white text-base"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-sm sm:text-base tracking-tight text-white leading-none">GeoSync <span class="text-blue-400">Dual</span></h1>
+                        <span id="windowRoleBadge" class="hidden text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            Ventana Secundaria
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 hidden xl:block mt-0.5">Comparador de Google Maps con Giro de Norte y Medidor</p>
+                </div>
+            </div>
+
+            <!-- Botón de retorno a ubicación inicial -->
+            <button id="btnResetCenter" title="Centrar en Madrid / Leganés" class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700/80 transition">
+                <i class="fa-solid fa-location-crosshairs text-blue-400"></i>
+                <span>Leganés / Madrid</span>
+            </button>
+        </div>
+
+        <!-- Controles Centrales: Sincronización, Giro, División y Medición -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Toggle Zoom Sincronizado (Activo por defecto) -->
+            <button id="btnSyncZoom" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/10" title="Sincronizar el nivel de zoom entre ambos mapas">
+                <i id="iconSyncZoom" class="fa-solid fa-magnifying-glass-plus text-blue-400"></i>
+                <span class="hidden sm:inline">Zoom Sincr.</span>
+                <span id="dotSyncZoom" class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+            </button>
+
+            <!-- Toggle Posición/Movimiento Relativo Sincronizado -->
+            <button id="btnSyncPan" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el desplazamiento relativo (pan) manteniendo la ubicación propia de cada mapa">
+                <i class="fa-solid fa-arrows-up-down-left-right text-slate-400"></i>
+                <span class="hidden lg:inline">Posición</span>
+                <span id="dotSyncPan" class="w-2 h-2 rounded-full bg-slate-600"></span>
+            </button>
+
+            <!-- Toggle Giro / Norte Sincronizado -->
+            <button id="btnSyncBearing" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el ángulo de rotación (Norte) entre ambos mapas">
+                <i class="fa-regular fa-compass text-amber-400"></i>
+                <span class="hidden lg:inline">Sincr. Giro</span>
+                <span id="dotSyncBearing" class="w-2 h-2 rounded-full bg-slate-600"></span>
+            </button>
+
+            <!-- Botón de igualar vistas inmediatamente (solo bajo demanda explícita) -->
+            <button id="btnAlignNow" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition" title="Igualar centro, zoom y rotación del Mapa 2 con el Mapa 1 ahora mismo">
+                <i class="fa-solid fa-clone"></i>
+            </button>
+
+            <div class="h-5 w-[1px] bg-slate-800 mx-0.5"></div>
+
+            <!-- Botón Alternar División Vertical / Horizontal -->
+            <button id="btnToggleSplitLayout" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition" title="Cambiar entre división Lado a Lado (Vertical) o Arriba y Abajo (Horizontal)">
+                <i id="iconSplitLayout" class="fa-solid fa-table-columns text-cyan-400"></i>
+                <span id="textSplitLayout" class="hidden md:inline">Lado a Lado</span>
+            </button>
+
+            <!-- Botón Modo Medidor de Distancia -->
+            <button id="btnMeasureMode" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50" title="Activar o desactivar medidor de distancia haciendo clic en cualquier mapa">
+                <i class="fa-solid fa-ruler-combined text-rose-400"></i>
+                <span class="hidden sm:inline">Medir</span>
+                <span id="badgeMeasurePoints" class="hidden px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-mono">0</span>
+            </button>
+        </div>
+
+        <!-- Controles Derechos: Indicador de Zoom, Ocultar Todo y Ventana Emergente -->
+        <div class="flex items-center gap-2">
+            <!-- Nivel de Zoom en vivo -->
+            <div class="hidden lg:flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-xl">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Zoom</span>
+                <span id="zoomLevelDisplay" class="font-mono text-xs font-bold text-amber-400">14.0</span>
+            </div>
+
+            <!-- Botón Global para ocultar controles de ambos mapas a la vez -->
+            <button id="btnToggleAllCleanMode" class="p-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition" title="Mostrar u ocultar todos los paneles flotantes en ambos mapas">
+                <i id="iconAllCleanMode" class="fa-solid fa-eye-slash"></i>
+            </button>
+
+            <!-- Botón para desacoplar en 2ª ventana emergente real -->
+            <button id="btnPopupWindow" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/20 transition cursor-pointer" title="Abrir el Mapa 2 en una ventana separada del navegador sincronizada en tiempo real">
+                <i class="fa-solid fa-up-right-from-square"></i>
+                <span id="popupBtnText" class="hidden sm:inline">Abrir en 2ª Ventana</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL DE LOS DOS MAPAS -->
+    <main id="mapsGridContainer" class="flex-1 flex flex-row relative overflow-hidden bg-slate-950">
+        
+        <!-- ==================== PANEL MAPA 1 (IZQUIERDO / SUPERIOR) ==================== -->
+        <section id="panelMap1" class="relative flex-1 w-full h-full border-r border-slate-800 transition-all duration-300 overflow-hidden">
+            <!-- Contenedor Leaflet 1 -->
+            <div id="map1" class="w-full h-full z-10"></div>
+
+            <!-- Botón Discreto Permanente en Mapa 1 para Ocultar/Mostrar Controles (Modo Limpio) -->
+            <button id="btnCleanMap1" title="Ocultar/Mostrar controles del Mapa 1 para ver el máximo mapa posible" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
+                <i id="iconCleanMap1" class="fa-solid fa-eye-slash text-xs text-blue-400"></i>
+            </button>
+
+            <!-- Tarjeta Flotante Superior: Identificador + Selector de Vista + Buscador Mapa 1 -->
+            <div id="uiTopOverlay1" class="absolute top-3 left-14 right-14 z-[500] flex flex-col gap-2 max-w-xl pointer-events-none transition-opacity duration-200">
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit">
+                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                        <span class="text-xs font-bold text-blue-200 tracking-wide">MAPA 1</span>
+                    </div>
+
+                    <!-- Botones de selección de capa (Google Maps) -->
+                    <div class="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="1">
+                        <button data-layer="streets" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition bg-blue-600 text-white shadow">
+                            Calles
+                        </button>
+                        <button data-layer="satellite" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                            Satélite
+                        </button>
+                        <button data-layer="hybrid" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                            Híbrido
+                        </button>
+                        <button data-layer="terrain" class="layer-btn-1 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                            Terreno
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Buscador Independiente Mapa 1 -->
+                <div class="relative w-full max-w-sm pointer-events-auto">
+                    <form id="searchForm1" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-blue-500 rounded-xl shadow-xl overflow-hidden transition">
+                        <span class="pl-3 pr-2 text-blue-400 text-xs">
+                            <i id="searchIcon1" class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input
+                            id="searchInput1"
+                            type="text"
+                            autocomplete="off"
+                            placeholder="Buscar lugar, dirección o coords en Mapa 1..."
+                            class="w-full bg-transparent py-2 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
+                        />
+                        <button
+                            type="button"
+                            id="btnClearSearch1"
+                            title="Limpiar búsqueda y marcador"
+                            class="hidden px-2 py-1.5 text-slate-400 hover:text-rose-400 text-xs transition"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-3 py-2 bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-semibold transition border-l border-slate-700/80"
+                        >
+                            Ir
+                        </button>
+                    </form>
+
+                    <!-- Desplegable de resultados Mapa 1 -->
+                    <div id="searchResults1" class="hidden absolute left-0 right-0 mt-1.5 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
+                </div>
+            </div>
+
+            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 1) -->
+            <div id="uiCompassOverlay1" class="absolute top-28 right-3 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
+                <!-- Botón Rosa de los Vientos / Norte -->
+                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
+                    <button id="btnResetNorth1" title="Clic para restablecer el Norte a 0° (o arrastra el mapa con clic derecho / Shift+Arrastrar)" class="relative w-10 h-10 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
+                        <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
+                        <!-- Aguja de la brújula que gira dinámicamente -->
+                        <div id="compassNeedle1" class="w-6 h-6 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
+                            <svg viewBox="0 0 24 24" class="w-5 h-5">
+                                <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
+                                <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <span id="bearingValue1" class="font-mono text-[10px] font-bold text-blue-300">0° N</span>
+                    <button id="btnToggleRotPanel1" title="Mostrar/ocultar controles de giro fino" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 w-full text-center transition">
+                        <i class="fa-solid fa-rotate"></i> Girar
+                    </button>
+                </div>
+
+                <!-- Panel desplegable de giro preciso Mapa 1 -->
+                <div id="rotPanel1" class="hidden bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-2.5 shadow-2xl w-48 flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-[11px] text-slate-300 font-medium">
+                        <span>Orientación Norte</span>
+                        <button data-map="1" data-angle="0" class="quick-rot-btn text-[10px] text-blue-400 hover:underline font-mono">Reset 0°</button>
+                    </div>
+                    <input id="bearingSlider1" type="range" min="0" max="359" value="0" class="bearing-slider w-full" />
+                    <div class="grid grid-cols-4 gap-1">
+                        <button data-map="1" data-delta="-45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-45°</button>
+                        <button data-map="1" data-delta="-15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-15°</button>
+                        <button data-map="1" data-delta="15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+15°</button>
+                        <button data-map="1" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-tight">
+                        <i class="fa-solid fa-computer-mouse text-blue-400 mr-1"></i>Usa <strong>Clic derecho + arrastrar</strong> o <strong>Shift + Alt + arrastrar</strong> para girar libremente.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Barra inferior de coordenadas del Mapa 1 -->
+            <div id="uiCoordsOverlay1" class="absolute bottom-3 left-3 z-[500] pointer-events-none hidden sm:flex items-center gap-2 bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
+                <i class="fa-solid fa-compass text-blue-400"></i>
+                <span id="coordsMap1">40.3280, -3.7645</span>
+            </div>
+        </section>
+
+        <!-- ==================== PANEL MAPA 2 (DERECHO / INFERIOR) ==================== -->
+        <section id="panelMap2" class="relative flex-1 w-full h-full transition-all duration-300 overflow-hidden">
+            <!-- Contenedor Leaflet 2 -->
+            <div id="map2" class="w-full h-full z-10"></div>
+
+            <!-- Botón Discreto Permanente en Mapa 2 para Ocultar/Mostrar Controles (Modo Limpio) -->
+            <button id="btnCleanMap2" title="Ocultar/Mostrar controles del Mapa 2 para ver el máximo mapa posible" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
+                <i id="iconCleanMap2" class="fa-solid fa-eye-slash text-xs text-emerald-400"></i>
+            </button>
+
+            <!-- Tarjeta Flotante Superior: Identificador + Selector de Vista + Buscador Mapa 2 -->
+            <div id="uiTopOverlay2" class="absolute top-3 left-14 right-14 z-[500] flex flex-col gap-2 max-w-xl pointer-events-none transition-opacity duration-200">
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit">
+                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span class="text-xs font-bold text-emerald-200 tracking-wide">MAPA 2</span>
+                    </div>
+
+                    <!-- Botones de selección de capa (Google Maps) -->
+                    <div class="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="2">
+                        <button data-layer="streets" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                            Calles
+                        </button>
+                        <button data-layer="satellite" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                            Satélite
+                        </button>
+                        <button data-layer="hybrid" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition bg-emerald-600 text-white shadow">
+                            Híbrido
+                        </button>
+                        <button data-layer="terrain" class="layer-btn-2 px-2.5 py-1 rounded-md text-xs font-medium transition text-slate-400 hover:text-white">
+                            Terreno
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Buscador Independiente Mapa 2 -->
+                <div class="relative w-full max-w-sm pointer-events-auto">
+                    <form id="searchForm2" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-emerald-500 rounded-xl shadow-xl overflow-hidden transition">
+                        <span class="pl-3 pr-2 text-emerald-400 text-xs">
+                            <i id="searchIcon2" class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input
+                            id="searchInput2"
+                            type="text"
+                            autocomplete="off"
+                            placeholder="Buscar lugar, dirección o coords en Mapa 2..."
+                            class="w-full bg-transparent py-2 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none"
+                        />
+                        <button
+                            type="button"
+                            id="btnClearSearch2"
+                            title="Limpiar búsqueda y marcador"
+                            class="hidden px-2 py-1.5 text-slate-400 hover:text-rose-400 text-xs transition"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-3 py-2 bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold transition border-l border-slate-700/80"
+                        >
+                            Ir
+                        </button>
+                    </form>
+
+                    <!-- Desplegable de resultados Mapa 2 -->
+                    <div id="searchResults2" class="hidden absolute left-0 right-0 mt-1.5 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
+                </div>
+            </div>
+
+            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 2) -->
+            <div id="uiCompassOverlay2" class="absolute top-28 right-3 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
+                <!-- Botón Rosa de los Vientos / Norte -->
+                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
+                    <button id="btnResetNorth2" title="Clic para restablecer el Norte a 0° (o arrastra el mapa con clic derecho / Shift+Arrastrar)" class="relative w-10 h-10 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
+                        <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
+                        <!-- Aguja de la brújula que gira dinámicamente -->
+                        <div id="compassNeedle2" class="w-6 h-6 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
+                            <svg viewBox="0 0 24 24" class="w-5 h-5">
+                                <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
+                                <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
+                            </svg>
+                        </div>
+                    </button>
+                    <span id="bearingValue2" class="font-mono text-[10px] font-bold text-emerald-300">0° N</span>
+                    <button id="btnToggleRotPanel2" title="Mostrar/ocultar controles de giro fino" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 w-full text-center transition">
+                        <i class="fa-solid fa-rotate"></i> Girar
+                    </button>
+                </div>
+
+                <!-- Panel desplegable de giro preciso Mapa 2 -->
+                <div id="rotPanel2" class="hidden bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-2.5 shadow-2xl w-48 flex flex-col gap-2">
+                    <div class="flex items-center justify-between text-[11px] text-slate-300 font-medium">
+                        <span>Orientación Norte</span>
+                        <button data-map="2" data-angle="0" class="quick-rot-btn text-[10px] text-emerald-400 hover:underline font-mono">Reset 0°</button>
+                    </div>
+                    <input id="bearingSlider2" type="range" min="0" max="359" value="0" class="bearing-slider w-full" />
+                    <div class="grid grid-cols-4 gap-1">
+                        <button data-map="2" data-delta="-45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-45°</button>
+                        <button data-map="2" data-delta="-15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-15°</button>
+                        <button data-map="2" data-delta="15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+15°</button>
+                        <button data-map="2" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-tight">
+                        <i class="fa-solid fa-computer-mouse text-emerald-400 mr-1"></i>Usa <strong>Clic derecho + arrastrar</strong> o <strong>Shift + Alt + arrastrar</strong> para girar libremente.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Barra inferior de coordenadas del Mapa 2 -->
+            <div id="uiCoordsOverlay2" class="absolute bottom-3 left-3 z-[500] pointer-events-none hidden sm:flex items-center gap-2 bg-slate-900/85 backdrop-blur-md px-3 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
+                <i class="fa-solid fa-compass text-emerald-400"></i>
+                <span id="coordsMap2">40.3280, -3.7645</span>
+            </div>
+        </section>
+
+        <!-- ==================== PANEL FLOTANTE DE MEDICIÓN DE DISTANCIA ==================== -->
+        <div id="measurementDock" class="hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-[900] w-[92%] max-w-lg bg-slate-900/95 backdrop-blur-xl border border-rose-500/40 rounded-2xl p-3.5 shadow-2xl">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+                        <i class="fa-solid fa-route text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-rose-400">Medidor de Distancia Activo</span>
+                            <span id="measureSegmentsCount" class="text-[11px] font-mono text-slate-400">(0 puntos)</span>
+                        </div>
+                        <div class="flex items-baseline gap-2 mt-0.5">
+                            <span id="totalDistanceValue" class="font-mono text-xl sm:text-2xl font-bold text-white">0.00 m</span>
+                            <span id="secondaryDistanceValue" class="font-mono text-xs text-slate-400">(0.000 km)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de acción de medición -->
+                <div class="flex items-center gap-1.5">
+                    <button id="btnUndoMeasure" title="Deshacer último punto" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition disabled:opacity-40" disabled>
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button id="btnClearMeasure" title="Borrar toda la medición" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-semibold transition">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Limpiar</span>
+                    </button>
+                    <button id="btnCloseMeasureDock" title="Salir del modo medición" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 border-t border-slate-800/80 pt-1.5 flex items-center justify-between">
+                <span><i class="fa-solid fa-hand-pointer text-rose-400 mr-1"></i> Haz clic en <strong>cualquiera de los dos mapas</strong> para trazar puntos sincronizados.</span>
+                <span class="hidden sm:inline font-mono text-[10px] text-slate-500">ESC para salir</span>
+            </p>
+        </div>
+
+        <!-- Notificación Toast no intrusiva -->
+        <div id="toastNotification" class="pointer-events-none opacity-0 transition-all duration-300 transform translate-y-2 fixed top-16 left-1/2 -translate-x-1/2 z-[1200] bg-slate-900/95 border border-slate-700 text-slate-100 px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-medium">
+            <i class="fa-solid fa-circle-info text-blue-400"></i>
+            <span id="toastMessage">Sincronización activa</span>
+        </div>
+    </main>
+
+    <script>
+        /**************************************************************************
+         * CONFIGURACIÓN INICIAL Y PARÁMETROS DE VENTANA
+         **************************************************************************/
+        const urlParams = new URLSearchParams(window.location.search);
+        const windowRole = urlParams.get('role') || 'dual'; // 'dual' | 'popup_map2'
+
+        // Coordenadas iniciales: Leganés / Sur de Madrid
+        const INITIAL_CENTER = [40.3280, -3.7645];
+        const INITIAL_ZOOM = 14;
+
+        // Estado global de la aplicación
+        const state = {
+            syncZoom: true,       // Zoom sincronizado activo por defecto
+            syncPan: false,       // Desplazamiento (pan relativo) sincronizado opcional
+            syncBearing: false,   // Sincronización de giro (Norte) opcional
+            splitDirection: 'vertical', // 'vertical' (Lado a Lado) | 'horizontal' (Arriba y Abajo)
+            cleanMode: { 1: false, 2: false }, // Ocultar UI en cada mapa
+            isMeasuring: false,   // Modo medidor de distancia
+            measurePoints: [],    // Lista de objetos { lat, lng }
+            isProgrammaticMove: false, // Bandera para evitar bucles infinitos de eventos
+            externalPopupRef: null,    // Referencia a la ventana emergente abierta
+            map1LayerType: 'streets',
+            map2LayerType: 'hybrid',
+            map1Bearing: 0,
+            map2Bearing: 0,
+            lastCenter1: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
+            lastCenter2: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
+            lastSearchResults: { 1: [], 2: [] }
+        };
+
+        // Canal de comunicación entre ventanas del navegador (BroadcastChannel API)
+        const syncChannel = new BroadcastChannel('geosync_dual_maps_channel_v1');
+
+        /**************************************************************************
+         * PROVEEDOR DE CAPAS DE GOOGLE MAPS PARA LEAFLET
+         * (Sin necesidad de clave API de pago mediante servidores de teselas mt0-mt3)
+         **************************************************************************/
+        function createGoogleTileLayer(type) {
+            // lyrs: m = Calles (Standard), s = Satélite, y = Híbrido, p = Terreno
+            const lyrsMap = {
+                streets: 'm',
+                satellite: 's',
+                hybrid: 'y',
+                terrain: 'p'
+            };
+            const lyrs = lyrsMap[type] || 'm';
+
+            return L.tileLayer(`https://{s}.google.com/vt/lyrs=${lyrs}&x={x}&y={y}&z={z}&hl=es`, {
+                maxZoom: 21,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                attribution: '&copy; Google Maps'
+            });
+        }
+
+        /**************************************************************************
+         * INICIALIZACIÓN DE LOS DOS MAPAS LEAFLET CON SOPORTE DE ROTACIÓN (NORTE)
+         **************************************************************************/
+        const map1 = L.map('map1', {
+            center: INITIAL_CENTER,
+            zoom: INITIAL_ZOOM,
+            zoomControl: false,
+            zoomSnap: 0.5,
+            zoomDelta: 0.5,
+            rotate: true,
+            bearing: 0,
+            touchRotate: true,
+            shiftKeyRotate: true
+        });
+
+        const map2 = L.map('map2', {
+            center: INITIAL_CENTER,
+            zoom: INITIAL_ZOOM,
+            zoomControl: false,
+            zoomSnap: 0.5,
+            zoomDelta: 0.5,
+            rotate: true,
+            bearing: 0,
+            touchRotate: true,
+            shiftKeyRotate: true
+        });
+
+        // Controles de zoom en la esquina superior derecha para no chocar con el selector
+        L.control.zoom({ position: 'topright' }).addTo(map1);
+        L.control.zoom({ position: 'topright' }).addTo(map2);
+
+        // Escala métrica en ambos mapas
+        L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map1);
+        L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map2);
+
+        // Capas base activas en cada mapa
+        let activeTileLayer1 = createGoogleTileLayer(state.map1LayerType).addTo(map1);
+        let activeTileLayer2 = createGoogleTileLayer(state.map2LayerType).addTo(map2);
+
+        // Grupos de capas para dibujar las líneas y marcadores de medición en ambos mapas
+        const measureLayerGroup1 = L.layerGroup().addTo(map1);
+        const measureLayerGroup2 = L.layerGroup().addTo(map2);
+
+        // Marcadores de búsqueda independientes para cada mapa
+        let searchMarker1 = null;
+        let searchMarker2 = null;
+
+        /**************************************************************************
+         * SISTEMA DE ROTACIÓN DE VISTA Y ORIENTACIÓN DEL NORTE (BRÚJULA + RATÓN)
+         **************************************************************************/
+        function normalizeAngle(deg) {
+            return ((Math.round(deg) % 360) + 360) % 360;
+        }
+
+        function getCardinalDirection(deg) {
+            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+            return dirs[Math.round(deg / 45) % 8];
+        }
+
+        function applyMapBearing(mapNum, angleDeg, broadcast = true, syncOther = true) {
+            const norm = normalizeAngle(angleDeg);
+            const targetMap = mapNum === 1 ? map1 : map2;
+            const otherMap = mapNum === 1 ? map2 : map1;
+            const otherNum = mapNum === 1 ? 2 : 1;
+
+            if (mapNum === 1) state.map1Bearing = norm;
+            else state.map2Bearing = norm;
+
+            // Aplicar rotación nativa con leaflet-rotate
+            if (typeof targetMap.setBearing === 'function') {
+                targetMap.setBearing(norm);
+            }
+
+            updateCompassUI(mapNum, norm);
+
+            // Si "Sincronizar Giro" está activo, rotar el otro mapa también
+            if (syncOther && state.syncBearing) {
+                if (otherNum === 1) state.map1Bearing = norm;
+                else state.map2Bearing = norm;
+                if (typeof otherMap.setBearing === 'function') {
+                    otherMap.setBearing(norm);
+                }
+                updateCompassUI(otherNum, norm);
+            }
+
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'BEARING_CHANGE',
+                    mapNum,
+                    bearing: norm,
+                    syncBearing: state.syncBearing
+                });
+            }
+        }
+
+        function updateCompassUI(mapNum, angleDeg) {
+            const norm = normalizeAngle(angleDeg);
+            const needle = document.getElementById(`compassNeedle${mapNum}`);
+            const label = document.getElementById(`bearingValue${mapNum}`);
+            const slider = document.getElementById(`bearingSlider${mapNum}`);
+
+            if (needle) needle.style.transform = `rotate(${norm}deg)`;
+            if (label) label.textContent = `${norm}° ${getCardinalDirection(norm)}`;
+            if (slider && document.activeElement !== slider) slider.value = norm;
+        }
+
+        // Sincronizar UI cuando el usuario gira con Shift+Alt+Drag o gestos táctiles
+        map1.on('rotate', () => {
+            if (typeof map1.getBearing === 'function') {
+                const b = normalizeAngle(map1.getBearing());
+                state.map1Bearing = b;
+                updateCompassUI(1, b);
+                if (state.syncBearing && !state.isProgrammaticMove) {
+                    state.isProgrammaticMove = true;
+                    map2.setBearing(b);
+                    state.map2Bearing = b;
+                    updateCompassUI(2, b);
+                    state.isProgrammaticMove = false;
+                }
+            }
+        });
+
+        map2.on('rotate', () => {
+            if (typeof map2.getBearing === 'function') {
+                const b = normalizeAngle(map2.getBearing());
+                state.map2Bearing = b;
+                updateCompassUI(2, b);
+                if (state.syncBearing && !state.isProgrammaticMove) {
+                    state.isProgrammaticMove = true;
+                    map1.setBearing(b);
+                    state.map1Bearing = b;
+                    updateCompassUI(1, b);
+                    state.isProgrammaticMove = false;
+                }
+            }
+        });
+
+        // Permitir rotar el mapa arrastrando con el botón derecho del ratón (o Ctrl + arrastrar)
+        function enableRightClickDragRotation(mapInstance, mapNum) {
+            const container = mapInstance.getContainer();
+            let isRotatingDrag = false;
+            let startX = 0;
+            let startBearing = 0;
+
+            container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            container.addEventListener('mousedown', (e) => {
+                if (e.button === 2 || (e.button === 0 && e.ctrlKey)) {
+                    isRotatingDrag = true;
+                    startX = e.clientX;
+                    startBearing = mapNum === 1 ? state.map1Bearing : state.map2Bearing;
+                    mapInstance.dragging.disable();
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isRotatingDrag) return;
+                const deltaX = e.clientX - startX;
+                const newBearing = startBearing + deltaX * 0.65;
+                applyMapBearing(mapNum, newBearing, true, true);
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (isRotatingDrag) {
+                    isRotatingDrag = false;
+                    mapInstance.dragging.enable();
+                }
+            });
+        }
+
+        enableRightClickDragRotation(map1, 1);
+        enableRightClickDragRotation(map2, 2);
+
+        // Eventos de los controles de brújula y rotación en Mapa 1 y Mapa 2
+        [1, 2].forEach(num => {
+            document.getElementById(`btnResetNorth${num}`).addEventListener('click', () => {
+                applyMapBearing(num, 0, true, true);
+                showToast(`Mapa ${num}: Norte restablecido a 0°`);
+            });
+
+            document.getElementById(`btnToggleRotPanel${num}`).addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById(`rotPanel${num}`).classList.toggle('hidden');
+            });
+
+            document.getElementById(`bearingSlider${num}`).addEventListener('input', (e) => {
+                applyMapBearing(num, parseFloat(e.target.value), true, true);
+            });
+        });
+
+        document.querySelectorAll('.quick-rot-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mapNum = parseInt(btn.dataset.map, 10);
+                const angle = parseFloat(btn.dataset.angle);
+                applyMapBearing(mapNum, angle, true, true);
+            });
+        });
+
+        document.querySelectorAll('.delta-rot-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mapNum = parseInt(btn.dataset.map, 10);
+                const delta = parseFloat(btn.dataset.delta);
+                const current = mapNum === 1 ? state.map1Bearing : state.map2Bearing;
+                applyMapBearing(mapNum, current + delta, true, true);
+            });
+        });
+
+        /**************************************************************************
+         * BUSCADOR DE UBICACIONES INDEPENDIENTE POR CADA MAPA (CORREGIDO Y ROBUSTO)
+         **************************************************************************/
+        function parseCoordinatesQuery(query) {
+            const match = query.trim().match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/);
+            if (!match) return null;
+            const lat = parseFloat(match[1]);
+            const lng = parseFloat(match[2]);
+            if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                return { lat, lon: lng, display_name: `Coordenadas (${lat.toFixed(5)}, ${lng.toFixed(5)})` };
+            }
+            return null;
+        }
+
+        function createSearchPinIcon(mapNum) {
+            const colorClass = mapNum === 1
+                ? 'bg-blue-600 border-blue-200 shadow-blue-500/50'
+                : 'bg-emerald-600 border-emerald-200 shadow-emerald-500/50';
+            return L.divIcon({
+                className: 'custom-search-pin',
+                html: `<div class="w-7 h-7 -ml-3.5 -mt-7 rounded-full ${colorClass} border-2 shadow-lg flex items-center justify-center text-white text-xs animate-bounce">
+                        <i class="fa-solid fa-location-dot"></i>
+                       </div>`,
+                iconSize: [28, 28],
+                popupAnchor: [0, -28]
+            });
+        }
+
+        function selectSearchResult(mapNum, item, broadcast = true) {
+            const targetMap = mapNum === 1 ? map1 : map2;
+            const otherMap = mapNum === 1 ? map2 : map1;
+            const resultsBox = document.getElementById(`searchResults${mapNum}`);
+            const inputEl = document.getElementById(`searchInput${mapNum}`);
+            const clearBtn = document.getElementById(`btnClearSearch${mapNum}`);
+
+            // Soportar tanto item.lon (Nominatim) como item.lng
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lon !== undefined ? item.lon : item.lng);
+            if (isNaN(lat) || isNaN(lng)) {
+                showToast('Coordenadas de búsqueda no válidas');
+                return;
+            }
+
+            const label = item.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            const shortName = label.split(',')[0];
+
+            resultsBox.classList.add('hidden');
+            inputEl.value = shortName;
+            clearBtn.classList.remove('hidden');
+
+            // Determinar zoom óptimo según boundingbox si existe o zoom 16 por defecto
+            let targetZoom = 16;
+            if (item.boundingbox && item.boundingbox.length === 4) {
+                const south = parseFloat(item.boundingbox[0]);
+                const north = parseFloat(item.boundingbox[1]);
+                const diff = Math.abs(north - south);
+                if (diff > 2) targetZoom = 9;
+                else if (diff > 0.5) targetZoom = 12;
+                else if (diff > 0.08) targetZoom = 14;
+                else targetZoom = 16;
+            }
+
+            // Bloquear temporalmente el listener de sincronización para que el otro mapa NO devuelva el mapa buscado a su posición anterior
+            state.isProgrammaticMove = true;
+
+            // Detener cualquier animación previa y navegar directamente al sitio buscado
+            targetMap.stop();
+            targetMap.setView([lat, lng], targetZoom, { animate: false });
+
+            // Colocar o actualizar marcador en el mapa correspondiente después de centrar
+            if (mapNum === 1) {
+                if (searchMarker1) map1.removeLayer(searchMarker1);
+                searchMarker1 = L.marker([lat, lng], { icon: createSearchPinIcon(1) })
+                    .addTo(map1)
+                    .bindPopup(`<div class="text-slate-900 text-xs font-medium"><strong>Mapa 1:</strong> ${label}</div>`)
+                    .openPopup();
+            } else {
+                if (searchMarker2) map2.removeLayer(searchMarker2);
+                searchMarker2 = L.marker([lat, lng], { icon: createSearchPinIcon(2) })
+                    .addTo(map2)
+                    .bindPopup(`<div class="text-slate-900 text-xs font-medium"><strong>Mapa 2:</strong> ${label}</div>`)
+                    .openPopup();
+            }
+
+            // Sincronizar el segundo mapa según las opciones activas sin alterar el mapa que acaba de buscar
+            otherMap.stop();
+            if (state.syncZoom) {
+                otherMap.setZoom(targetZoom, { animate: false });
+            }
+
+            // Actualizar referencias de centro para cada mapa de modo que el pan relativo parta de la nueva ubicación buscada
+            state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
+            state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
+
+            updateZoomBadge(targetZoom);
+            updateCoordsDisplay();
+
+            setTimeout(() => {
+                state.isProgrammaticMove = false;
+            }, 250);
+
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'SEARCH_RESULT_SELECTED',
+                    mapNum,
+                    item: { lat, lon: lng, display_name: label, boundingbox: item.boundingbox },
+                    zoom: targetZoom,
+                    syncZoom: state.syncZoom,
+                    syncPan: state.syncPan
+                });
+            }
+
+            showToast(`Mapa ${mapNum} → ${shortName}`);
+        }
+
+        function clearSearchMap(mapNum, broadcast = true) {
+            const inputEl = document.getElementById(`searchInput${mapNum}`);
+            const resultsBox = document.getElementById(`searchResults${mapNum}`);
+            const clearBtn = document.getElementById(`btnClearSearch${mapNum}`);
+
+            inputEl.value = '';
+            resultsBox.innerHTML = '';
+            resultsBox.classList.add('hidden');
+            clearBtn.classList.add('hidden');
+            state.lastSearchResults[mapNum] = [];
+
+            if (mapNum === 1 && searchMarker1) {
+                map1.removeLayer(searchMarker1);
+                searchMarker1 = null;
+            } else if (mapNum === 2 && searchMarker2) {
+                map2.removeLayer(searchMarker2);
+                searchMarker2 = null;
+            }
+
+            if (broadcast) {
+                syncChannel.postMessage({ type: 'SEARCH_CLEAR', mapNum });
+            }
+        }
+
+        async function performMapSearch(mapNum, autoNavigateFirst = false) {
+            const inputEl = document.getElementById(`searchInput${mapNum}`);
+            const resultsBox = document.getElementById(`searchResults${mapNum}`);
+            const iconEl = document.getElementById(`searchIcon${mapNum}`);
+            const clearBtn = document.getElementById(`btnClearSearch${mapNum}`);
+            const query = inputEl.value.trim();
+
+            if (!query) return;
+            clearBtn.classList.remove('hidden');
+
+            // 1. Comprobar si son coordenadas directas (ej. "40.4168, -3.7038")
+            const directCoords = parseCoordinatesQuery(query);
+            if (directCoords) {
+                selectSearchResult(mapNum, directCoords, true);
+                return;
+            }
+
+            // 2. Consultar geocodificador Nominatim OpenStreetMap
+            iconEl.className = 'fa-solid fa-spinner fa-spin';
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&accept-language=es`;
+                const response = await fetch(url, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const results = await response.json();
+
+                resultsBox.innerHTML = '';
+                state.lastSearchResults[mapNum] = Array.isArray(results) ? results : [];
+
+                if (!Array.isArray(results) || results.length === 0) {
+                    resultsBox.innerHTML = `
+                        <div class="px-3 py-2.5 text-xs text-slate-400 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-exclamation text-amber-400"></i>
+                            <span>No se encontraron resultados para "${query}"</span>
+                        </div>`;
+                    resultsBox.classList.remove('hidden');
+                    return;
+                }
+
+                // Si el usuario pulsó "Ir" o Enter, navegamos directamente al primer resultado encontrado y además dejamos los demás en la lista
+                if (autoNavigateFirst) {
+                    selectSearchResult(mapNum, results[0], true);
+                    return;
+                }
+
+                results.forEach((item) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'w-full text-left px-3 py-2 hover:bg-slate-800/90 transition flex items-start gap-2.5 group';
+                    const parts = item.display_name.split(',');
+                    const title = parts[0];
+                    const subtitle = parts.slice(1, 4).join(',').trim();
+
+                    btn.innerHTML = `
+                        <i class="fa-solid fa-location-dot mt-1 text-xs ${mapNum === 1 ? 'text-blue-400' : 'text-emerald-400'} group-hover:scale-110 transition"></i>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-semibold text-slate-100 truncate">${title}</div>
+                            <div class="text-[11px] text-slate-400 truncate">${subtitle || item.display_name}</div>
+                        </div>
+                        <span class="text-[10px] font-mono text-slate-500 group-hover:text-slate-300 self-center">Ir &rarr;</span>
+                    `;
+
+                    // Usar mousedown con preventDefault evita que el blur del input cierre la lista antes de navegar
+                    btn.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectSearchResult(mapNum, item, true);
+                    });
+
+                    resultsBox.appendChild(btn);
+                });
+
+                resultsBox.classList.remove('hidden');
+            } catch (err) {
+                showToast('Error al buscar la ubicación. Comprueba tu conexión.');
+            } finally {
+                iconEl.className = 'fa-solid fa-magnifying-glass';
+            }
+        }
+
+        // Configurar eventos de los dos buscadores independientes con autocompletado y navegación directa al pulsar Enter / Ir
+        [1, 2].forEach(mapNum => {
+            const form = document.getElementById(`searchForm${mapNum}`);
+            const input = document.getElementById(`searchInput${mapNum}`);
+            const clearBtn = document.getElementById(`btnClearSearch${mapNum}`);
+            const resultsBox = document.getElementById(`searchResults${mapNum}`);
+            let debounceTimer = null;
+
+            // Evitar que los clics o scroll en el buscador se propaguen al mapa de fondo
+            L.DomEvent.disableClickPropagation(form);
+            L.DomEvent.disableClickPropagation(resultsBox);
+            L.DomEvent.disableScrollPropagation(resultsBox);
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                // Si ya hay resultados cargados en pantalla para esta búsqueda, ir inmediatamente al primero
+                if (!resultsBox.classList.contains('hidden') && state.lastSearchResults[mapNum].length > 0) {
+                    selectSearchResult(mapNum, state.lastSearchResults[mapNum][0], true);
+                } else {
+                    performMapSearch(mapNum, true);
+                }
+            });
+
+            input.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                const val = input.value.trim();
+                if (val.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                    if (val.length >= 3) {
+                        debounceTimer = setTimeout(() => performMapSearch(mapNum, false), 350);
+                    }
+                } else {
+                    clearBtn.classList.add('hidden');
+                    resultsBox.classList.add('hidden');
+                }
+            });
+
+            clearBtn.addEventListener('click', () => clearSearchMap(mapNum, true));
+        });
+
+        // Cerrar desplegables de búsqueda al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            [1, 2].forEach(num => {
+                const form = document.getElementById(`searchForm${num}`);
+                const resultsBox = document.getElementById(`searchResults${num}`);
+                if (!form.contains(e.target) && !resultsBox.contains(e.target)) {
+                    resultsBox.classList.add('hidden');
+                }
+            });
+        });
+
+        /**************************************************************************
+         * GESTIÓN DE CAMBIO DE VISTA (CALLES, SATÉLITE, HÍBRIDO, TERRENO)
+         **************************************************************************/
+        function setMapLayer(mapNumber, layerType, broadcast = true) {
+            if (mapNumber === 1) {
+                state.map1LayerType = layerType;
+                map1.removeLayer(activeTileLayer1);
+                activeTileLayer1 = createGoogleTileLayer(layerType).addTo(map1);
+                updateLayerButtonsUI(1, layerType);
+            } else {
+                state.map2LayerType = layerType;
+                map2.removeLayer(activeTileLayer2);
+                activeTileLayer2 = createGoogleTileLayer(layerType).addTo(map2);
+                updateLayerButtonsUI(2, layerType);
+            }
+
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'LAYER_CHANGE',
+                    mapNumber,
+                    layerType
+                });
+            }
+        }
+
+        function updateLayerButtonsUI(mapNumber, activeLayer) {
+            const buttons = document.querySelectorAll(`.layer-btn-${mapNumber}`);
+            const activeColorClass = mapNumber === 1 ? 'bg-blue-600' : 'bg-emerald-600';
+
+            buttons.forEach(btn => {
+                const isTarget = btn.getAttribute('data-layer') === activeLayer;
+                btn.classList.remove('bg-blue-600', 'bg-emerald-600', 'text-white', 'shadow', 'text-slate-400');
+                if (isTarget) {
+                    btn.classList.add(activeColorClass, 'text-white', 'shadow');
+                } else {
+                    btn.classList.add('text-slate-400');
+                }
+            });
+        }
+
+        // Eventos para los selectores de vista de ambos mapas
+        document.querySelectorAll('.layer-btn-1').forEach(btn => {
+            btn.addEventListener('click', () => setMapLayer(1, btn.dataset.layer));
+        });
+        document.querySelectorAll('.layer-btn-2').forEach(btn => {
+            btn.addEventListener('click', () => setMapLayer(2, btn.dataset.layer));
+        });
+
+        /**************************************************************************
+         * LÓGICA DE SINCRONIZACIÓN DE ZOOM Y MOVIMIENTO RELATIVO (PAN OFFSET)
+         **************************************************************************/
+        function updateZoomBadge(zoomVal) {
+            document.getElementById('zoomLevelDisplay').textContent = Number(zoomVal).toFixed(1);
+        }
+
+        function updateCoordsDisplay() {
+            const c1 = map1.getCenter();
+            const c2 = map2.getCenter();
+            document.getElementById('coordsMap1').textContent = `${c1.lat.toFixed(4)}, ${c1.lng.toFixed(4)}`;
+            document.getElementById('coordsMap2').textContent = `${c2.lat.toFixed(4)}, ${c2.lng.toFixed(4)}`;
+        }
+
+        // Sincroniza desde un mapa origen hacia el mapa destino aplicando desplazamiento relativo (delta) sin igualar coordenadas
+        function handleMapSync(sourceMap, targetMap, sourceId) {
+            updateCoordsDisplay();
+            const currentZoom = sourceMap.getZoom();
+            const currentCenter = sourceMap.getCenter();
+            updateZoomBadge(currentZoom);
+
+            const lastSourceCenter = sourceId === 'map1' ? state.lastCenter1 : state.lastCenter2;
+            const dLat = currentCenter.lat - lastSourceCenter.lat;
+            const dLng = currentCenter.lng - lastSourceCenter.lng;
+
+            // Actualizar siempre el último centro registrado del mapa origen
+            if (sourceId === 'map1') {
+                state.lastCenter1 = { lat: currentCenter.lat, lng: currentCenter.lng };
+            } else {
+                state.lastCenter2 = { lat: currentCenter.lat, lng: currentCenter.lng };
+            }
+
+            if (state.isProgrammaticMove) return;
+
+            state.isProgrammaticMove = true;
+
+            const targetCenter = targetMap.getCenter();
+            // Calcular nueva posición desplazada para el mapa destino conservando su ubicación independiente
+            // Ajustamos dLng según la relación de cosenos de latitud para que la distancia física recorrida sea equivalente
+            const cosSource = Math.max(0.15, Math.cos(currentCenter.lat * Math.PI / 180));
+            const cosTarget = Math.max(0.15, Math.cos(targetCenter.lat * Math.PI / 180));
+            const adjustedDLng = dLng * (cosSource / cosTarget);
+
+            const nextTargetLat = Math.max(-85, Math.min(85, targetCenter.lat + dLat));
+            const nextTargetLng = targetCenter.lng + adjustedDLng;
+            const hasMoved = Math.abs(dLat) > 1e-9 || Math.abs(dLng) > 1e-9;
+
+            // 1. Sincronización local (entre Mapa 1 y Mapa 2 en la misma página)
+            if (state.syncZoom && state.syncPan) {
+                const newPos = hasMoved ? [nextTargetLat, nextTargetLng] : [targetCenter.lat, targetCenter.lng];
+                targetMap.setView(newPos, currentZoom, { animate: false });
+            } else if (state.syncZoom) {
+                if (targetMap.getZoom() !== currentZoom) {
+                    targetMap.setZoom(currentZoom, { animate: false });
+                }
+            } else if (state.syncPan && hasMoved) {
+                targetMap.setView([nextTargetLat, nextTargetLng], targetMap.getZoom(), { animate: false });
+            }
+
+            // Actualizar el centro guardado del mapa destino tras aplicar el desplazamiento relativo
+            const updatedTargetCenter = targetMap.getCenter();
+            if (sourceId === 'map1') {
+                state.lastCenter2 = { lat: updatedTargetCenter.lat, lng: updatedTargetCenter.lng };
+            } else {
+                state.lastCenter1 = { lat: updatedTargetCenter.lat, lng: updatedTargetCenter.lng };
+            }
+
+            // 2. Sincronización con ventana emergente externa mediante BroadcastChannel (enviando delta relativo)
+            syncChannel.postMessage({
+                type: 'MAP_VIEW_CHANGE',
+                sourceId,
+                zoom: currentZoom,
+                dLat,
+                dLng: adjustedDLng,
+                syncZoom: state.syncZoom,
+                syncPan: state.syncPan
+            });
+
+            updateCoordsDisplay();
+
+            requestAnimationFrame(() => {
+                state.isProgrammaticMove = false;
+            });
+        }
+
+        // Escuchar eventos de zoom y movimiento en ambos mapas
+        map1.on('zoom move', () => handleMapSync(map1, map2, 'map1'));
+        map2.on('zoom move', () => handleMapSync(map2, map1, 'map2'));
+
+        /**************************************************************************
+         * HERRAMIENTA DE MEDICIÓN DE DISTANCIA SINCRONIZADA EN AMBOS MAPAS
+         **************************************************************************/
+        function formatDistance(meters) {
+            if (meters >= 1000) {
+                return {
+                    primary: `${(meters / 1000).toFixed(2)} km`,
+                    secondary: `(${Math.round(meters).toLocaleString('es-ES')} m)`
+                };
+            }
+            return {
+                primary: `${meters.toFixed(1)} m`,
+                secondary: `(${(meters / 1000).toFixed(3)} km)`
+            };
+        }
+
+        function createMarkerIcon(index, isLast) {
+            const bgColor = index === 0 ? 'bg-emerald-500' : (isLast ? 'bg-rose-500 measure-dot-pulse' : 'bg-rose-500');
+            return L.divIcon({
+                className: 'custom-measure-point',
+                html: `<div class="relative w-6 h-6 -ml-1.5 -mt-1.5 rounded-full ${bgColor} border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-mono font-bold text-white">${index + 1}</div>`,
+                iconSize: [12, 12]
+            });
+        }
+
+        function renderMeasurementsOnMap(targetLayerGroup, referenceMap) {
+            targetLayerGroup.clearLayers();
+            const pts = state.measurePoints;
+            if (pts.length === 0) return;
+
+            const latLngs = pts.map(p => [p.lat, p.lng]);
+
+            // Polilínea principal con borde de contraste y línea punteada interior
+            if (pts.length > 1) {
+                L.polyline(latLngs, {
+                    color: '#0f172a',
+                    weight: 6,
+                    opacity: 0.7
+                }).addTo(targetLayerGroup);
+
+                L.polyline(latLngs, {
+                    color: '#f43f5e',
+                    weight: 3.5,
+                    dashArray: '8, 6',
+                    opacity: 1
+                }).addTo(targetLayerGroup);
+
+                // Etiquetas de distancia en el punto medio de cada segmento
+                for (let i = 1; i < pts.length; i++) {
+                    const p1 = L.latLng(pts[i - 1].lat, pts[i - 1].lng);
+                    const p2 = L.latLng(pts[i].lat, pts[i].lng);
+                    const segDist = referenceMap.distance(p1, p2);
+                    const midLat = (p1.lat + p2.lat) / 2;
+                    const midLng = (p1.lng + p2.lng) / 2;
+
+                    const labelText = segDist >= 1000
+                        ? `${(segDist / 1000).toFixed(2)} km`
+                        : `${Math.round(segDist)} m`;
+
+                    L.tooltip({
+                        permanent: true,
+                        direction: 'center',
+                        className: 'segment-tooltip'
+                    })
+                    .setLatLng([midLat, midLng])
+                    .setContent(labelText)
+                    .addTo(targetLayerGroup);
+                }
+            }
+
+            // Marcadores numerados en cada vértice
+            pts.forEach((pt, idx) => {
+                L.marker([pt.lat, pt.lng], {
+                    icon: createMarkerIcon(idx, idx === pts.length - 1),
+                    interactive: false
+                }).addTo(targetLayerGroup);
+            });
+        }
+
+        function updateMeasurementUI() {
+            renderMeasurementsOnMap(measureLayerGroup1, map1);
+            renderMeasurementsOnMap(measureLayerGroup2, map2);
+
+            const pts = state.measurePoints;
+            let totalMeters = 0;
+            for (let i = 1; i < pts.length; i++) {
+                totalMeters += map1.distance(
+                    [pts[i - 1].lat, pts[i - 1].lng],
+                    [pts[i].lat, pts[i].lng]
+                );
+            }
+
+            const formatted = formatDistance(totalMeters);
+            document.getElementById('totalDistanceValue').textContent = formatted.primary;
+            document.getElementById('secondaryDistanceValue').textContent = formatted.secondary;
+            document.getElementById('measureSegmentsCount').textContent = `(${pts.length} ${pts.length === 1 ? 'punto' : 'puntos'})`;
+            document.getElementById('btnUndoMeasure').disabled = pts.length === 0;
+
+            const badge = document.getElementById('badgeMeasurePoints');
+            if (pts.length > 0) {
+                badge.textContent = pts.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function addMeasurementPoint(latlng, broadcast = true) {
+            state.measurePoints.push({ lat: latlng.lat, lng: latlng.lng });
+            updateMeasurementUI();
+
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'MEASURE_UPDATE',
+                    points: state.measurePoints,
+                    isMeasuring: state.isMeasuring
+                });
+            }
+        }
+
+        function clearMeasurements(broadcast = true) {
+            state.measurePoints = [];
+            updateMeasurementUI();
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'MEASURE_UPDATE',
+                    points: [],
+                    isMeasuring: state.isMeasuring
+                });
+            }
+        }
+
+        function toggleMeasureMode(forceState, broadcast = true) {
+            state.isMeasuring = typeof forceState === 'boolean' ? forceState : !state.isMeasuring;
+            
+            const btn = document.getElementById('btnMeasureMode');
+            const dock = document.getElementById('measurementDock');
+            const container = document.getElementById('mapsGridContainer');
+
+            if (state.isMeasuring) {
+                btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-rose-600 border-rose-500 text-white shadow-md shadow-rose-600/30';
+                dock.classList.remove('hidden');
+                container.classList.add('measuring-cursor');
+                showToast('Modo medición activo: haz clic en cualquier mapa para añadir puntos');
+            } else {
+                btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50';
+                dock.classList.add('hidden');
+                container.classList.remove('measuring-cursor');
+            }
+
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'MEASURE_MODE_TOGGLE',
+                    isMeasuring: state.isMeasuring
+                });
+            }
+        }
+
+        // Clic en cualquiera de los dos mapas para añadir puntos de medición
+        map1.on('click', (e) => {
+            if (state.isMeasuring) addMeasurementPoint(e.latlng, true);
+        });
+        map2.on('click', (e) => {
+            if (state.isMeasuring) addMeasurementPoint(e.latlng, true);
+        });
+
+        /**************************************************************************
+         * CONTROLES DE INTERFAZ Y VENTANA EMERGENTE (POPUP WINDOW)
+         **************************************************************************/
+        function showToast(message) {
+            const toast = document.getElementById('toastNotification');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.remove('opacity-0', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-2');
+            }, 2600);
+        }
+
+        function updateSyncButtonsUI() {
+            const btnZoom = document.getElementById('btnSyncZoom');
+            const dotZoom = document.getElementById('dotSyncZoom');
+            const btnPan = document.getElementById('btnSyncPan');
+            const dotPan = document.getElementById('dotSyncPan');
+            const btnBearing = document.getElementById('btnSyncBearing');
+            const dotBearing = document.getElementById('dotSyncBearing');
+
+            if (state.syncZoom) {
+                btnZoom.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/10';
+                dotZoom.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
+            } else {
+                btnZoom.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-400';
+                dotZoom.className = 'w-2 h-2 rounded-full bg-slate-600';
+            }
+
+            if (state.syncPan) {
+                btnPan.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-indigo-600/20 border-indigo-500/50 text-indigo-300 shadow-sm shadow-indigo-500/10';
+                dotPan.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
+            } else {
+                btnPan.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750';
+                dotPan.className = 'w-2 h-2 rounded-full bg-slate-600';
+            }
+
+            if (state.syncBearing) {
+                btnBearing.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm shadow-amber-500/10';
+                dotBearing.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]';
+            } else {
+                btnBearing.className = 'flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750';
+                dotBearing.className = 'w-2 h-2 rounded-full bg-slate-600';
+            }
+        }
+
+        // Botón Zoom Sincronizado
+        document.getElementById('btnSyncZoom').addEventListener('click', () => {
+            state.syncZoom = !state.syncZoom;
+            updateSyncButtonsUI();
+            if (state.syncZoom) {
+                state.isProgrammaticMove = true;
+                map2.setZoom(map1.getZoom(), { animate: true });
+                state.isProgrammaticMove = false;
+                showToast('Zoom sincronizado activado');
+            } else {
+                showToast('Zoom sincronizado desactivado');
+            }
+            syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
+        });
+
+        // Botón Posición Sincronizada (Pan Relativo sin igualar coordenadas)
+        document.getElementById('btnSyncPan').addEventListener('click', () => {
+            state.syncPan = !state.syncPan;
+            // Sincronizar las referencias actuales para que empiece a desplazar relativamente desde donde está cada mapa
+            state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
+            state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
+            updateSyncButtonsUI();
+            if (state.syncPan) {
+                showToast('Posición sincronizada activa (desplazamiento relativo conservando cada lugar)');
+            } else {
+                showToast('Posición sincronizada desactivada (movimiento independiente)');
+            }
+            syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
+        });
+
+        // Botón Giro / Norte Sincronizado
+        document.getElementById('btnSyncBearing').addEventListener('click', () => {
+            state.syncBearing = !state.syncBearing;
+            updateSyncButtonsUI();
+            if (state.syncBearing) {
+                applyMapBearing(2, state.map1Bearing, true, false);
+                showToast('Giro del Norte sincronizado entre ambos mapas');
+            } else {
+                showToast('Giro del Norte independiente en cada mapa');
+            }
+            syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
+        });
+
+        // Botón Igualar vistas ahora (copia centro, zoom y giro del Mapa 1 al Mapa 2 bajo petición explícita)
+        document.getElementById('btnAlignNow').addEventListener('click', () => {
+            state.isProgrammaticMove = true;
+            map2.setView(map1.getCenter(), map1.getZoom(), { animate: true });
+            applyMapBearing(2, state.map1Bearing, false, false);
+            state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
+            state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
+            state.isProgrammaticMove = false;
+            syncChannel.postMessage({
+                type: 'FORCE_ALIGN',
+                center: map1.getCenter(),
+                zoom: map1.getZoom(),
+                bearing: state.map1Bearing
+            });
+            showToast('Ambos mapas alineados a la misma posición, zoom y orientación');
+        });
+
+        /**************************************************************************
+         * MODO LIMPIO (OCULTAR CONTROLES EN CADA MAPA) Y DIVISIÓN HORIZONTAL/VERTICAL
+         **************************************************************************/
+        function setMapCleanMode(mapNum, isClean) {
+            state.cleanMode[mapNum] = isClean;
+            const panel = document.getElementById(`panelMap${mapNum}`);
+            const topOverlay = document.getElementById(`uiTopOverlay${mapNum}`);
+            const compassOverlay = document.getElementById(`uiCompassOverlay${mapNum}`);
+            const coordsOverlay = document.getElementById(`uiCoordsOverlay${mapNum}`);
+            const iconBtn = document.getElementById(`iconCleanMap${mapNum}`);
+            const btnClean = document.getElementById(`btnCleanMap${mapNum}`);
+
+            if (isClean) {
+                panel.classList.add('map-ui-hidden');
+                topOverlay.classList.add('hidden');
+                compassOverlay.classList.add('hidden');
+                coordsOverlay.classList.add('sm:hidden', 'hidden');
+                iconBtn.className = 'fa-solid fa-eye text-xs text-amber-400';
+                btnClean.classList.add('opacity-60', 'hover:opacity-100');
+            } else {
+                panel.classList.remove('map-ui-hidden');
+                topOverlay.classList.remove('hidden');
+                compassOverlay.classList.remove('hidden');
+                coordsOverlay.classList.remove('sm:hidden', 'hidden');
+                coordsOverlay.classList.add('hidden', 'sm:flex');
+                iconBtn.className = `fa-solid fa-eye-slash text-xs ${mapNum === 1 ? 'text-blue-400' : 'text-emerald-400'}`;
+                btnClean.classList.remove('opacity-60', 'hover:opacity-100');
+            }
+
+            // Actualizar icono del botón global si ambos están ocultos
+            const bothClean = state.cleanMode[1] && state.cleanMode[2];
+            const globalIcon = document.getElementById('iconAllCleanMode');
+            if (globalIcon) {
+                globalIcon.className = bothClean ? 'fa-solid fa-eye text-amber-400' : 'fa-solid fa-eye-slash';
+            }
+        }
+
+        document.getElementById('btnCleanMap1').addEventListener('click', () => {
+            const nextState = !state.cleanMode[1];
+            setMapCleanMode(1, nextState);
+            showToast(nextState ? 'Controles del Mapa 1 ocultos (Modo Limpio)' : 'Controles del Mapa 1 visibles');
+        });
+
+        document.getElementById('btnCleanMap2').addEventListener('click', () => {
+            const nextState = !state.cleanMode[2];
+            setMapCleanMode(2, nextState);
+            showToast(nextState ? 'Controles del Mapa 2 ocultos (Modo Limpio)' : 'Controles del Mapa 2 visibles');
+        });
+
+        document.getElementById('btnToggleAllCleanMode').addEventListener('click', () => {
+            const targetClean = !(state.cleanMode[1] && state.cleanMode[2]);
+            setMapCleanMode(1, targetClean);
+            setMapCleanMode(2, targetClean);
+            showToast(targetClean ? 'Modo Limpio activado en ambos mapas' : 'Controles restaurados en ambos mapas');
+        });
+
+        // Alternar división de pantalla entre Vertical (Lado a Lado) y Horizontal (Arriba y Abajo)
+        function applySplitDirection(direction) {
+            state.splitDirection = direction;
+            const container = document.getElementById('mapsGridContainer');
+            const panel1 = document.getElementById('panelMap1');
+            const icon = document.getElementById('iconSplitLayout');
+            const text = document.getElementById('textSplitLayout');
+
+            if (direction === 'horizontal') {
+                container.classList.remove('flex-row');
+                container.classList.add('flex-col');
+                panel1.classList.remove('border-r');
+                panel1.classList.add('border-b');
+                icon.className = 'fa-solid fa-bars text-cyan-400';
+                text.textContent = 'Arriba / Abajo';
+                showToast('División Horizontal (Arriba y Abajo)');
+            } else {
+                container.classList.remove('flex-col');
+                container.classList.add('flex-row');
+                panel1.classList.remove('border-b');
+                panel1.classList.add('border-r');
+                icon.className = 'fa-solid fa-table-columns text-cyan-400';
+                text.textContent = 'Lado a Lado';
+                showToast('División Vertical (Lado a Lado)');
+            }
+
+            // Recalcular tamaño de los lienzos de Leaflet para evitar zonas grises
+            setTimeout(() => {
+                map1.invalidateSize();
+                map2.invalidateSize();
+            }, 180);
+            setTimeout(() => {
+                map1.invalidateSize();
+                map2.invalidateSize();
+            }, 350);
+        }
+
+        document.getElementById('btnToggleSplitLayout').addEventListener('click', () => {
+            const nextDir = state.splitDirection === 'vertical' ? 'horizontal' : 'vertical';
+            applySplitDirection(nextDir);
+        });
+
+        // Botón Centrar en Leganés / Madrid
+        document.getElementById('btnResetCenter').addEventListener('click', () => {
+            state.isProgrammaticMove = true;
+            map1.setView(INITIAL_CENTER, INITIAL_ZOOM, { animate: true });
+            map2.setView(INITIAL_CENTER, INITIAL_ZOOM, { animate: true });
+            state.lastCenter1 = { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] };
+            state.lastCenter2 = { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] };
+            state.isProgrammaticMove = false;
+            syncChannel.postMessage({
+                type: 'FORCE_ALIGN',
+                center: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
+                zoom: INITIAL_ZOOM
+            });
+            showToast('Centrado en Leganés / Madrid');
+        });
+
+        // Controles de Medición
+        document.getElementById('btnMeasureMode').addEventListener('click', () => toggleMeasureMode());
+        document.getElementById('btnCloseMeasureDock').addEventListener('click', () => toggleMeasureMode(false));
+        document.getElementById('btnClearMeasure').addEventListener('click', () => clearMeasurements(true));
+        document.getElementById('btnUndoMeasure').addEventListener('click', () => {
+            state.measurePoints.pop();
+            updateMeasurementUI();
+            syncChannel.postMessage({
+                type: 'MEASURE_UPDATE',
+                points: state.measurePoints,
+                isMeasuring: state.isMeasuring
+            });
+        });
+
+        // Tecla ESC para salir del modo medición
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && state.isMeasuring) {
+                toggleMeasureMode(false);
+            }
+        });
+
+        /**************************************************************************
+         * MODO 2 VENTANAS SEPARADAS DEL NAVEGADOR (POPUP + BROADCASTCHANNEL)
+         **************************************************************************/
+        function applySingleMapLayout(whichMap) {
+            const p1 = document.getElementById('panelMap1');
+            const p2 = document.getElementById('panelMap2');
+
+            if (whichMap === 1) {
+                p1.classList.remove('hidden');
+                p2.classList.add('hidden');
+            } else if (whichMap === 2) {
+                p1.classList.add('hidden');
+                p2.classList.remove('hidden');
+            } else {
+                p1.classList.remove('hidden');
+                p2.classList.remove('hidden');
+            }
+
+            setTimeout(() => {
+                map1.invalidateSize();
+                map2.invalidateSize();
+            }, 150);
+        }
+
+        // Configurar si esta instancia se abrió como la 2ª ventana emergente
+        if (windowRole === 'popup_map2') {
+            document.title = 'Mapa 2 (Ventana Sincronizada) - GeoSync Dual';
+            document.getElementById('windowRoleBadge').classList.remove('hidden');
+            document.getElementById('btnPopupWindow').classList.add('hidden');
+            applySingleMapLayout(2);
+
+            // Avisar a la ventana principal de que la ventana secundaria está lista
+            syncChannel.postMessage({ type: 'POPUP_OPENED' });
+
+            window.addEventListener('beforeunload', () => {
+                syncChannel.postMessage({ type: 'POPUP_CLOSED' });
+            });
+        }
+
+        // Botón para abrir la segunda ventana emergente o restaurar vista dividida
+        document.getElementById('btnPopupWindow').addEventListener('click', () => {
+            if (state.externalPopupRef && !state.externalPopupRef.closed) {
+                state.externalPopupRef.close();
+                state.externalPopupRef = null;
+                applySingleMapLayout('both');
+                document.getElementById('popupBtnText').textContent = 'Abrir en 2ª Ventana';
+                showToast('Vista dividida restaurada en una sola ventana');
+                return;
+            }
+
+            const popupUrl = new URL(window.location.href);
+            popupUrl.searchParams.set('role', 'popup_map2');
+
+            const width = Math.min(900, window.screen.availWidth * 0.48);
+            const height = Math.min(780, window.screen.availHeight * 0.85);
+            const left = window.screenX + window.outerWidth - width - 20;
+            const top = window.screenY + 40;
+
+            const popup = window.open(
+                popupUrl.toString(),
+                'GeoSyncMap2Window',
+                `width=${Math.round(width)},height=${Math.round(height)},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=no`
+            );
+
+            if (popup) {
+                state.externalPopupRef = popup;
+                applySingleMapLayout(1); // Deja el Mapa 1 a pantalla completa en la ventana principal
+                document.getElementById('popupBtnText').textContent = 'Unir Ventanas';
+                showToast('Mapa 2 abierto en ventana independiente sincronizada');
+            } else {
+                showToast('El navegador bloqueó la ventana emergente. Permítela e inténtalo de nuevo.');
+            }
+        });
+
+        // Recepción de eventos entre ventanas separadas vía BroadcastChannel
+        syncChannel.onmessage = (event) => {
+            const data = event.data;
+            if (!data || !data.type) return;
+
+            switch (data.type) {
+                case 'POPUP_OPENED':
+                    // Enviar estado actual a la ventana recién abierta
+                    syncChannel.postMessage({
+                        type: 'INIT_STATE',
+                        center: map1.getCenter(),
+                        zoom: map1.getZoom(),
+                        syncZoom: state.syncZoom,
+                        syncPan: state.syncPan,
+                        map1LayerType: state.map1LayerType,
+                        map2LayerType: state.map2LayerType,
+                        measurePoints: state.measurePoints,
+                        isMeasuring: state.isMeasuring
+                    });
+                    break;
+
+                case 'POPUP_CLOSED':
+                    state.externalPopupRef = null;
+                    applySingleMapLayout('both');
+                    document.getElementById('popupBtnText').textContent = 'Abrir en 2ª Ventana';
+                    showToast('Ventana secundaria cerrada: vista dual restaurada');
+                    break;
+
+                case 'INIT_STATE':
+                    state.syncZoom = data.syncZoom;
+                    state.syncPan = data.syncPan;
+                    updateSyncButtonsUI();
+                    setMapLayer(1, data.map1LayerType, false);
+                    setMapLayer(2, data.map2LayerType, false);
+                    state.isProgrammaticMove = true;
+                    map1.setView(data.center, data.zoom, { animate: false });
+                    map2.setView(data.center, data.zoom, { animate: false });
+                    state.lastCenter1 = { lat: data.center.lat, lng: data.center.lng };
+                    state.lastCenter2 = { lat: data.center.lat, lng: data.center.lng };
+                    state.isProgrammaticMove = false;
+                    state.measurePoints = data.measurePoints || [];
+                    updateMeasurementUI();
+                    if (data.isMeasuring) toggleMeasureMode(true, false);
+                    break;
+
+                case 'MAP_VIEW_CHANGE':
+                    state.isProgrammaticMove = true;
+                    [map1, map2].forEach((m, idx) => {
+                        const c = m.getCenter();
+                        const nextLat = Math.max(-85, Math.min(85, c.lat + (data.dLat || 0)));
+                        const nextLng = c.lng + (data.dLng || 0);
+                        const hasDelta = Math.abs(data.dLat || 0) > 1e-9 || Math.abs(data.dLng || 0) > 1e-9;
+
+                        if (data.syncZoom && data.syncPan) {
+                            m.setView(hasDelta ? [nextLat, nextLng] : [c.lat, c.lng], data.zoom, { animate: false });
+                        } else if (data.syncZoom) {
+                            if (m.getZoom() !== data.zoom) m.setZoom(data.zoom, { animate: false });
+                        } else if (data.syncPan && hasDelta) {
+                            m.setView([nextLat, nextLng], m.getZoom(), { animate: false });
+                        }
+
+                        const updated = m.getCenter();
+                        if (idx === 0) state.lastCenter1 = { lat: updated.lat, lng: updated.lng };
+                        else state.lastCenter2 = { lat: updated.lat, lng: updated.lng };
+                    });
+                    updateZoomBadge(data.zoom);
+                    updateCoordsDisplay();
+                    requestAnimationFrame(() => { state.isProgrammaticMove = false; });
+                    break;
+
+                case 'FORCE_ALIGN':
+                    state.isProgrammaticMove = true;
+                    map1.setView(data.center, data.zoom, { animate: true });
+                    map2.setView(data.center, data.zoom, { animate: true });
+                    state.lastCenter1 = { lat: data.center.lat, lng: data.center.lng };
+                    state.lastCenter2 = { lat: data.center.lat, lng: data.center.lng };
+                    if (typeof data.bearing === 'number') {
+                        applyMapBearing(1, data.bearing, false, false);
+                        applyMapBearing(2, data.bearing, false, false);
+                    }
+                    state.isProgrammaticMove = false;
+                    break;
+
+                case 'SYNC_SETTINGS':
+                    state.syncZoom = data.syncZoom;
+                    state.syncPan = data.syncPan;
+                    if (typeof data.syncBearing === 'boolean') state.syncBearing = data.syncBearing;
+                    updateSyncButtonsUI();
+                    break;
+
+                case 'BEARING_CHANGE':
+                    applyMapBearing(data.mapNum, data.bearing, false, data.syncBearing);
+                    break;
+
+                case 'LAYER_CHANGE':
+                    setMapLayer(data.mapNumber, data.layerType, false);
+                    break;
+
+                case 'MEASURE_MODE_TOGGLE':
+                    toggleMeasureMode(data.isMeasuring, false);
+                    break;
+
+                case 'MEASURE_UPDATE':
+                    state.measurePoints = data.points || [];
+                    updateMeasurementUI();
+                    break;
+
+                case 'SEARCH_RESULT_SELECTED':
+                    selectSearchResult(data.mapNum, data.item, false);
+                    break;
+
+                case 'SEARCH_CLEAR':
+                    clearSearchMap(data.mapNum, false);
+                    break;
+            }
+        };
+
+        // Ajuste responsivo al redimensionar la ventana
+        window.addEventListener('resize', () => {
+            map1.invalidateSize();
+            map2.invalidateSize();
+        });
+    </script>
+</body>
+</html>
