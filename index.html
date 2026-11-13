@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparamaps - Comparador y Medidor de Mapas</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230A0F1D'/%3E%3Cpath d='M8 10l6-3v15l-6 3V10zm8 3l6-3v15l-6 3V13z' fill='%2300E5FF'/%3E%3C/svg%3E">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -16,6 +17,10 @@
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Proj4js & Proj4Leaflet para proyecciones cartográficas reales (EPSG:6933 Equal Area, EPSG:4326, etc.) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.2/proj4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4leaflet/1.0.2/proj4leaflet.min.js"></script>
 
     <!-- Leaflet Rotate Plugin (Soporte nativo de rotación de vista / rumbo / Norte con coordenadas exactas) -->
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
@@ -144,41 +149,36 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.5);
         }
 
-        /* Ocultar controles nativos de Leaflet cuando un mapa está en Modo Limpio */
-        .map-ui-hidden .leaflet-control-container {
+        /* Ocultar elementos UI en modo limpio */
+        .map-ui-hidden .leaflet-control-zoom,
+        .map-ui-hidden .leaflet-control-scale {
             display: none !important;
         }
     </style>
 </head>
-<body class="text-slate-100 flex flex-col h-screen select-none">
+<body class="bg-slate-950 text-slate-100 h-screen flex flex-col font-sans select-none">
 
-    <!-- BARRA DE HERRAMIENTAS SUPERIOR -->
-    <header id="mainHeader" class="h-14 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-3 sm:px-5 flex items-center justify-between gap-2 z-[1000] shrink-0 shadow-lg transition-all duration-200">
-        <!-- Marca y Ubicación rápida -->
+    <!-- BARRA SUPERIOR DE CONTROL GLOBAL -->
+    <header class="h-14 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-[1000] shadow-lg">
+        <!-- Logo y Estado de Ventana -->
         <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2.5">
-                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
-                    <i class="fa-solid fa-layer-group text-white text-base"></i>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                    <i class="fa-solid fa-map-location-dot text-sm"></i>
                 </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="font-bold text-sm sm:text-base tracking-tight text-white leading-none">Comparamaps <span class="text-blue-400"></span></h1>
-                        <span id="windowRoleBadge" class="hidden text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                            Ventana Secundaria
-                        </span>
-                    </div>
-                    <p class="text-[11px] text-slate-400 hidden xl:block mt-0.5">Comparador de Google Maps con Giro de Norte y Medidor</p>
-                </div>
+                <h1 class="font-bold text-sm sm:text-base tracking-tight text-slate-100 hidden sm:block">GeoSync <span class="text-blue-400">Dual</span></h1>
             </div>
-
-            <!-- Botón de retorno a ubicación inicial -->
-            <button id="btnResetCenter" title="Centrar en Madrid / Leganés" class="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700/80 transition">
-                <i class="fa-solid fa-location-crosshairs text-blue-400"></i>
-                <span>Leganés / Madrid</span>
+            <!-- Badge indicador si es ventana secundaria -->
+            <span id="windowRoleBadge" class="hidden px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-semibold">Ventana 2 (Sincronizada)</span>
+            
+            <div class="h-5 w-[1px] bg-slate-800 mx-1"></div>
+            <button id="btnResetCenter" class="px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold transition flex items-center gap-1.5" title="Centrar ambos mapas en Leganés / Madrid">
+                <i class="fa-solid fa-house-chimney text-blue-400"></i>
+                <span class="hidden md:inline">Madrid / Leganés</span>
             </button>
         </div>
 
-        <!-- Controles Centrales: Sincronización, Giro, División y Medición -->
+        <!-- Controles Centrales: Sincronización, Giro, Proyección, División y Medición -->
         <div class="flex items-center gap-1.5 sm:gap-2">
             <!-- Toggle Zoom Sincronizado (Activo por defecto) -->
             <button id="btnSyncZoom" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm shadow-blue-500/10" title="Sincronizar el nivel de zoom entre ambos mapas">
@@ -188,11 +188,44 @@
             </button>
 
             <!-- Toggle Posición/Movimiento Relativo Sincronizado -->
-            <button id="btnSyncPan" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el desplazamiento relativo (pan) manteniendo la ubicación propia de cada mapa">
+            <button id="btnSyncPan" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el desplazamiento relativo (pan)">
                 <i class="fa-solid fa-arrows-up-down-left-right text-slate-400"></i>
                 <span class="hidden lg:inline">Posición</span>
                 <span id="dotSyncPan" class="w-2 h-2 rounded-full bg-slate-600"></span>
             </button>
+
+            <!-- Selector de Proyección / Distorsión Global -->
+            <div class="relative">
+                <button id="btnGlobalProjectionMenu" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-amber-300 hover:bg-slate-750" title="Cambiar proyección cartográfica para comparar la distorsión de tamaño (ej. Mercator vs Área Equivalente)">
+                    <i class="fa-solid fa-globe text-amber-400"></i>
+                    <span id="globalProjectionLabel" class="hidden md:inline">Mercator vs Gall-Peters</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                </button>
+                <div id="globalProjectionDropdown" class="hidden absolute left-0 mt-1.5 w-64 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-[1100] divide-y divide-slate-800">
+                    <div class="p-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">Proyección y Distorsión de Tamaños</div>
+                    <button data-proj="mercator" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between bg-slate-800/60">
+                        <div>
+                            <div class="font-semibold text-amber-300">Web Mercator (EPSG:3857)</div>
+                            <div class="text-[10px] text-slate-400">Distorsiona Groenlandia (parece gigante)</div>
+                        </div>
+                        <i class="fa-solid fa-check text-amber-400 proj-check-mercator"></i>
+                    </button>
+                    <button data-proj="equal_area" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-emerald-300">Gall-Peters / Área Eq. (EPSG:6933)</div>
+                            <div class="text-[10px] text-slate-400">Tamaño real de Groenlandia vs África</div>
+                        </div>
+                        <i class="fa-solid fa-check text-emerald-400 hidden proj-check-equal_area"></i>
+                    </button>
+                    <button data-proj="plate_carree" class="proj-option-btn w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-800 transition flex items-center justify-between">
+                        <div>
+                            <div class="font-semibold text-blue-300">Plate Carrée (EPSG:4326)</div>
+                            <div class="text-[10px] text-slate-400">Coordenadas geográficas equirectangulares</div>
+                        </div>
+                        <i class="fa-solid fa-check text-blue-400 hidden proj-check-plate_carree"></i>
+                    </button>
+                </div>
+            </div>
 
             <!-- Toggle Giro / Norte Sincronizado -->
             <button id="btnSyncBearing" class="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750" title="Sincronizar el ángulo de rotación (Norte) entre ambos mapas">
@@ -252,17 +285,24 @@
             <div id="map1" class="w-full h-full z-10"></div>
 
             <!-- Botón Discreto Permanente en Mapa 1 para Ocultar/Mostrar Controles (Modo Limpio) -->
-            <button id="btnCleanMap1" title="Ocultar/Mostrar controles del Mapa 1 para ver el máximo mapa posible" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
+            <button id="btnCleanMap1" title="Ocultar/Mostrar controles del Mapa 1" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
                 <i id="iconCleanMap1" class="fa-solid fa-eye-slash text-xs text-blue-400"></i>
             </button>
 
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Vista + Buscador Mapa 1 -->
+            <!-- Tarjeta Flotante Superior: Identificador + Selector de Proyección Individual + Selector de Vista + Buscador Mapa 1 -->
             <div id="uiTopOverlay1" class="absolute top-3 left-14 right-14 z-[500] flex flex-col gap-2 max-w-xl pointer-events-none transition-opacity duration-200">
                 <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit">
                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
                         <span class="w-2 h-2 rounded-full bg-blue-400"></span>
                         <span class="text-xs font-bold text-blue-200 tracking-wide">MAPA 1</span>
                     </div>
+
+                    <!-- Selector de Proyección Individual para Mapa 1 -->
+                    <select id="projSelect1" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer" title="Proyección cartográfica del Mapa 1">
+                        <option value="mercator">Mercator (Estándar)</option>
+                        <option value="equal_area">Área Eq. (Gall-Peters)</option>
+                        <option value="plate_carree">Plate Carrée (4326)</option>
+                    </select>
 
                     <!-- Botones de selección de capa (Google Maps) -->
                     <div class="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="1">
@@ -367,17 +407,24 @@
             <div id="map2" class="w-full h-full z-10"></div>
 
             <!-- Botón Discreto Permanente en Mapa 2 para Ocultar/Mostrar Controles (Modo Limpio) -->
-            <button id="btnCleanMap2" title="Ocultar/Mostrar controles del Mapa 2 para ver el máximo mapa posible" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
+            <button id="btnCleanMap2" title="Ocultar/Mostrar controles del Mapa 2" class="absolute top-3 left-3 z-[650] w-9 h-9 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
                 <i id="iconCleanMap2" class="fa-solid fa-eye-slash text-xs text-emerald-400"></i>
             </button>
 
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Vista + Buscador Mapa 2 -->
+            <!-- Tarjeta Flotante Superior: Identificador + Selector de Proyección Individual + Selector de Vista + Buscador Mapa 2 -->
             <div id="uiTopOverlay2" class="absolute top-3 left-14 right-14 z-[500] flex flex-col gap-2 max-w-xl pointer-events-none transition-opacity duration-200">
                 <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit">
                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                         <span class="text-xs font-bold text-emerald-200 tracking-wide">MAPA 2</span>
                     </div>
+
+                    <!-- Selector de Proyección Individual para Mapa 2 (Ideal para comparar Groenlandia Mercator vs Gall-Peters) -->
+                    <select id="projSelect2" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-emerald-500 transition cursor-pointer" title="Proyección cartográfica del Mapa 2">
+                        <option value="mercator">Mercator (Estándar)</option>
+                        <option value="equal_area" selected>Área Eq. (Gall-Peters)</option>
+                        <option value="plate_carree">Plate Carrée (4326)</option>
+                    </select>
 
                     <!-- Botones de selección de capa (Google Maps) -->
                     <div class="flex items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="2">
@@ -546,6 +593,8 @@
             externalPopupRef: null,    // Referencia a la ventana emergente abierta
             map1LayerType: 'streets',
             map2LayerType: 'hybrid',
+            map1Proj: 'mercator',
+            map2Proj: 'equal_area',
             map1Bearing: 0,
             map2Bearing: 0,
             lastCenter1: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
@@ -557,11 +606,36 @@
         const syncChannel = new BroadcastChannel('geosync_dual_maps_channel_v1');
 
         /**************************************************************************
+         * DEFINICIÓN DE CRS (PROYECCIONES CARTOGRÁFICAS CON PROJ4)
+         **************************************************************************/
+        proj4.defs("EPSG:6933", "+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs");
+        proj4.defs("EPSG:4087", "+proj=eqc +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs");
+
+        const crsMercator = L.CRS.EPSG3857;
+        const crsEqualArea = new L.Proj.CRS('EPSG:6933',
+            '+proj=cea +lon_0=0 +lat_ts=30 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs',
+            {
+                resolutions: [
+                    65536, 32768, 16384, 8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0.5
+                ],
+                bounds: L.bounds([-20037508.34, -15496570.74], [20037508.34, 15496570.74])
+            }
+        );
+        const crsPlateCarree = L.CRS.EPSG4326;
+
+        function getCRSForProjection(projKey) {
+            switch(projKey) {
+                case 'equal_area': return crsEqualArea;
+                case 'plate_carree': return crsPlateCarree;
+                case 'mercator':
+                default: return crsMercator;
+            }
+        }
+
+        /**************************************************************************
          * PROVEEDOR DE CAPAS DE GOOGLE MAPS PARA LEAFLET
-         * (Sin necesidad de clave API de pago mediante servidores de teselas mt0-mt3)
          **************************************************************************/
         function createGoogleTileLayer(type) {
-            // lyrs: m = Calles (Standard), s = Satélite, y = Híbrido, p = Terreno
             const lyrsMap = {
                 streets: 'm',
                 satellite: 's',
@@ -578,11 +652,12 @@
         }
 
         /**************************************************************************
-         * INICIALIZACIÓN DE LOS DOS MAPAS LEAFLET CON SOPORTE DE ROTACIÓN (NORTE)
+         * INICIALIZACIÓN DE LOS DOS MAPAS LEAFLET CON SOPORTE DE PROYECCIÓN Y ROTACIÓN
          **************************************************************************/
-        const map1 = L.map('map1', {
+        let map1 = L.map('map1', {
             center: INITIAL_CENTER,
             zoom: INITIAL_ZOOM,
+            crs: getCRSForProjection(state.map1Proj),
             zoomControl: false,
             zoomSnap: 0.5,
             zoomDelta: 0.5,
@@ -592,9 +667,10 @@
             shiftKeyRotate: true
         });
 
-        const map2 = L.map('map2', {
+        let map2 = L.map('map2', {
             center: INITIAL_CENTER,
             zoom: INITIAL_ZOOM,
+            crs: getCRSForProjection(state.map2Proj),
             zoomControl: false,
             zoomSnap: 0.5,
             zoomDelta: 0.5,
@@ -604,25 +680,130 @@
             shiftKeyRotate: true
         });
 
-        // Controles de zoom en la esquina superior derecha para no chocar con el selector
         L.control.zoom({ position: 'topright' }).addTo(map1);
         L.control.zoom({ position: 'topright' }).addTo(map2);
 
-        // Escala métrica en ambos mapas
         L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map1);
         L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map2);
 
-        // Capas base activas en cada mapa
         let activeTileLayer1 = createGoogleTileLayer(state.map1LayerType).addTo(map1);
         let activeTileLayer2 = createGoogleTileLayer(state.map2LayerType).addTo(map2);
 
-        // Grupos de capas para dibujar las líneas y marcadores de medición en ambos mapas
         const measureLayerGroup1 = L.layerGroup().addTo(map1);
         const measureLayerGroup2 = L.layerGroup().addTo(map2);
 
-        // Marcadores de búsqueda independientes para cada mapa
         let searchMarker1 = null;
         let searchMarker2 = null;
+
+        /**************************************************************************
+         * FUNCIÓN PARA CAMBIAR PROYECCIÓN DE CADA MAPA DINÁMICAMENTE
+         **************************************************************************/
+        function setMapProjection(mapNum, projKey, broadcast = true) {
+            const targetMap = mapNum === 1 ? map1 : map2;
+            const currentCenter = targetMap.getCenter();
+            const currentZoom = targetMap.getZoom();
+            const currentBearing = mapNum === 1 ? state.map1Bearing : state.map2Bearing;
+            const tileType = mapNum === 1 ? state.map1LayerType : state.map2LayerType;
+
+            if (mapNum === 1) state.map1Proj = projKey;
+            else state.map2Proj = projKey;
+
+            const selectEl = document.getElementById(`projSelect${mapNum}`);
+            if (selectEl && selectEl.value !== projKey) selectEl.value = projKey;
+
+            targetMap.remove();
+
+            const newCrs = getCRSForProjection(projKey);
+            const newMapConfig = {
+                center: [currentCenter.lat, currentCenter.lng],
+                zoom: currentZoom,
+                crs: newCrs,
+                zoomControl: false,
+                zoomSnap: 0.5,
+                zoomDelta: 0.5,
+                rotate: true,
+                bearing: currentBearing,
+                touchRotate: true,
+                shiftKeyRotate: true
+            };
+
+            const newMapInstance = L.map(`map${mapNum}`, newMapConfig);
+            L.control.zoom({ position: 'topright' }).addTo(newMapInstance);
+            L.control.scale({ imperial: false, position: 'bottomright' }).addTo(newMapInstance);
+
+            const newTileLayer = createGoogleTileLayer(tileType).addTo(newMapInstance);
+            const newMeasureGroup = L.layerGroup().addTo(newMapInstance);
+
+            if (mapNum === 1) {
+                map1 = newMapInstance;
+                activeTileLayer1 = newTileLayer;
+                map1.on('zoom move', () => handleMapSync(map1, map2, 'map1'));
+                map1.on('rotate', () => handleMapRotateEvent(1));
+                map1.on('click', (e) => { if (state.isMeasuring) addMeasurementPoint(e.latlng, true); });
+                enableRightClickDragRotation(map1, 1);
+            } else {
+                map2 = newMapInstance;
+                activeTileLayer2 = newTileLayer;
+                map2.on('zoom move', () => handleMapSync(map2, map1, 'map2'));
+                map2.on('rotate', () => handleMapRotateEvent(2));
+                map2.on('click', (e) => { if (state.isMeasuring) addMeasurementPoint(e.latlng, true); });
+                enableRightClickDragRotation(map2, 2);
+            }
+
+            updateMeasurementUI();
+            applyMapBearing(mapNum, currentBearing, false, false);
+
+            if (broadcast) {
+                syncChannel.postMessage({
+                    type: 'PROJECTION_CHANGE',
+                    mapNum,
+                    projKey
+                });
+            }
+
+            const projNames = {
+                'mercator': 'Web Mercator (Estándar)',
+                'equal_area': 'Gall-Peters (Área Equivalente)',
+                'plate_carree': 'Plate Carrée (4326)'
+            };
+            showToast(`Mapa ${mapNum} proyectado en ${projNames[projKey] || projKey}`);
+        }
+
+        document.getElementById('projSelect1').addEventListener('change', (e) => {
+            setMapProjection(1, e.target.value, true);
+        });
+        document.getElementById('projSelect2').addEventListener('change', (e) => {
+            setMapProjection(2, e.target.value, true);
+        });
+
+        const globalProjBtn = document.getElementById('btnGlobalProjectionMenu');
+        const globalProjDropdown = document.getElementById('globalProjectionDropdown');
+
+        globalProjBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            globalProjDropdown.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', () => {
+            globalProjDropdown.classList.add('hidden');
+        });
+
+        document.querySelectorAll('.proj-option-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const proj = btn.dataset.proj;
+                setMapProjection(1, proj, true);
+                setMapProjection(2, proj, true);
+                document.getElementById('globalProjectionLabel').textContent = btn.querySelector('.font-semibold').textContent.split(' ')[0] + ' (...)';
+                
+                document.querySelectorAll('.proj-option-btn').forEach(b => {
+                    b.classList.remove('bg-slate-800/60');
+                    b.querySelector('i').classList.add('hidden');
+                });
+                btn.classList.add('bg-slate-800/60');
+                btn.querySelector('i').classList.remove('hidden');
+                globalProjDropdown.classList.add('hidden');
+            });
+        });
 
         /**************************************************************************
          * SISTEMA DE ROTACIÓN DE VISTA Y ORIENTACIÓN DEL NORTE (BRÚJULA + RATÓN)
@@ -645,14 +826,12 @@
             if (mapNum === 1) state.map1Bearing = norm;
             else state.map2Bearing = norm;
 
-            // Aplicar rotación nativa con leaflet-rotate
             if (typeof targetMap.setBearing === 'function') {
                 targetMap.setBearing(norm);
             }
 
             updateCompassUI(mapNum, norm);
 
-            // Si "Sincronizar Giro" está activo, rotar el otro mapa también
             if (syncOther && state.syncBearing) {
                 if (otherNum === 1) state.map1Bearing = norm;
                 else state.map2Bearing = norm;
@@ -683,38 +862,33 @@
             if (slider && document.activeElement !== slider) slider.value = norm;
         }
 
-        // Sincronizar UI cuando el usuario gira con Shift+Alt+Drag o gestos táctiles
-        map1.on('rotate', () => {
-            if (typeof map1.getBearing === 'function') {
-                const b = normalizeAngle(map1.getBearing());
-                state.map1Bearing = b;
-                updateCompassUI(1, b);
+        function handleMapRotateEvent(mapNum) {
+            const targetMap = mapNum === 1 ? map1 : map2;
+            const otherMap = mapNum === 1 ? map2 : map1;
+            const otherNum = mapNum === 1 ? 2 : 1;
+
+            if (typeof targetMap.getBearing === 'function') {
+                const b = normalizeAngle(targetMap.getBearing());
+                if (mapNum === 1) state.map1Bearing = b;
+                else state.map2Bearing = b;
+                updateCompassUI(mapNum, b);
+
                 if (state.syncBearing && !state.isProgrammaticMove) {
                     state.isProgrammaticMove = true;
-                    map2.setBearing(b);
-                    state.map2Bearing = b;
-                    updateCompassUI(2, b);
+                    if (otherNum === 1) state.map1Bearing = b;
+                    else state.map2Bearing = b;
+                    if (typeof otherMap.setBearing === 'function') {
+                        otherMap.setBearing(b);
+                    }
+                    updateCompassUI(otherNum, b);
                     state.isProgrammaticMove = false;
                 }
             }
-        });
+        }
 
-        map2.on('rotate', () => {
-            if (typeof map2.getBearing === 'function') {
-                const b = normalizeAngle(map2.getBearing());
-                state.map2Bearing = b;
-                updateCompassUI(2, b);
-                if (state.syncBearing && !state.isProgrammaticMove) {
-                    state.isProgrammaticMove = true;
-                    map1.setBearing(b);
-                    state.map1Bearing = b;
-                    updateCompassUI(1, b);
-                    state.isProgrammaticMove = false;
-                }
-            }
-        });
+        map1.on('rotate', () => handleMapRotateEvent(1));
+        map2.on('rotate', () => handleMapRotateEvent(2));
 
-        // Permitir rotar el mapa arrastrando con el botón derecho del ratón (o Ctrl + arrastrar)
         function enableRightClickDragRotation(mapInstance, mapNum) {
             const container = mapInstance.getContainer();
             let isRotatingDrag = false;
@@ -751,7 +925,6 @@
         enableRightClickDragRotation(map1, 1);
         enableRightClickDragRotation(map2, 2);
 
-        // Eventos de los controles de brújula y rotación en Mapa 1 y Mapa 2
         [1, 2].forEach(num => {
             document.getElementById(`btnResetNorth${num}`).addEventListener('click', () => {
                 applyMapBearing(num, 0, true, true);
@@ -786,7 +959,7 @@
         });
 
         /**************************************************************************
-         * BUSCADOR DE UBICACIONES INDEPENDIENTE POR CADA MAPA (CORREGIDO Y ROBUSTO)
+         * BUSCADOR DE UBICACIONES INDEPENDIENTE (CON SOPORTE DE PROYECCIÓN)
          **************************************************************************/
         function parseCoordinatesQuery(query) {
             const match = query.trim().match(/^(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)$/);
@@ -820,13 +993,9 @@
             const inputEl = document.getElementById(`searchInput${mapNum}`);
             const clearBtn = document.getElementById(`btnClearSearch${mapNum}`);
 
-            // Soportar tanto item.lon (Nominatim) como item.lng
             const lat = parseFloat(item.lat);
             const lng = parseFloat(item.lon !== undefined ? item.lon : item.lng);
-            if (isNaN(lat) || isNaN(lng)) {
-                showToast('Coordenadas de búsqueda no válidas');
-                return;
-            }
+            if (isNaN(lat) || isNaN(lng)) return;
 
             const label = item.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             const shortName = label.split(',')[0];
@@ -835,7 +1004,6 @@
             inputEl.value = shortName;
             clearBtn.classList.remove('hidden');
 
-            // Determinar zoom óptimo según boundingbox si existe o zoom 16 por defecto
             let targetZoom = 16;
             if (item.boundingbox && item.boundingbox.length === 4) {
                 const south = parseFloat(item.boundingbox[0]);
@@ -847,14 +1015,10 @@
                 else targetZoom = 16;
             }
 
-            // Bloquear temporalmente el listener de sincronización para que el otro mapa NO devuelva el mapa buscado a su posición anterior
             state.isProgrammaticMove = true;
-
-            // Detener cualquier animación previa y navegar directamente al sitio buscado
             targetMap.stop();
             targetMap.setView([lat, lng], targetZoom, { animate: false });
 
-            // Colocar o actualizar marcador en el mapa correspondiente después de centrar
             if (mapNum === 1) {
                 if (searchMarker1) map1.removeLayer(searchMarker1);
                 searchMarker1 = L.marker([lat, lng], { icon: createSearchPinIcon(1) })
@@ -869,13 +1033,11 @@
                     .openPopup();
             }
 
-            // Sincronizar el segundo mapa según las opciones activas sin alterar el mapa que acaba de buscar
             otherMap.stop();
             if (state.syncZoom) {
                 otherMap.setZoom(targetZoom, { animate: false });
             }
 
-            // Actualizar referencias de centro para cada mapa de modo que el pan relativo parta de la nueva ubicación buscada
             state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
             state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
 
@@ -934,20 +1096,16 @@
             if (!query) return;
             clearBtn.classList.remove('hidden');
 
-            // 1. Comprobar si son coordenadas directas (ej. "40.4168, -3.7038")
             const directCoords = parseCoordinatesQuery(query);
             if (directCoords) {
                 selectSearchResult(mapNum, directCoords, true);
                 return;
             }
 
-            // 2. Consultar geocodificador Nominatim OpenStreetMap
             iconEl.className = 'fa-solid fa-spinner fa-spin';
             try {
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&accept-language=es`;
-                const response = await fetch(url, {
-                    headers: { 'Accept': 'application/json' }
-                });
+                const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
                 const results = await response.json();
 
                 resultsBox.innerHTML = '';
@@ -963,7 +1121,6 @@
                     return;
                 }
 
-                // Si el usuario pulsó "Ir" o Enter, navegamos directamente al primer resultado encontrado y además dejamos los demás en la lista
                 if (autoNavigateFirst) {
                     selectSearchResult(mapNum, results[0], true);
                     return;
@@ -986,7 +1143,6 @@
                         <span class="text-[10px] font-mono text-slate-500 group-hover:text-slate-300 self-center">Ir &rarr;</span>
                     `;
 
-                    // Usar mousedown con preventDefault evita que el blur del input cierre la lista antes de navegar
                     btn.addEventListener('mousedown', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -998,13 +1154,12 @@
 
                 resultsBox.classList.remove('hidden');
             } catch (err) {
-                showToast('Error al buscar la ubicación. Comprueba tu conexión.');
+                showToast('Error al buscar la ubicación.');
             } finally {
                 iconEl.className = 'fa-solid fa-magnifying-glass';
             }
         }
 
-        // Configurar eventos de los dos buscadores independientes con autocompletado y navegación directa al pulsar Enter / Ir
         [1, 2].forEach(mapNum => {
             const form = document.getElementById(`searchForm${mapNum}`);
             const input = document.getElementById(`searchInput${mapNum}`);
@@ -1012,7 +1167,6 @@
             const resultsBox = document.getElementById(`searchResults${mapNum}`);
             let debounceTimer = null;
 
-            // Evitar que los clics o scroll en el buscador se propaguen al mapa de fondo
             L.DomEvent.disableClickPropagation(form);
             L.DomEvent.disableClickPropagation(resultsBox);
             L.DomEvent.disableScrollPropagation(resultsBox);
@@ -1020,7 +1174,6 @@
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
                 clearTimeout(debounceTimer);
-                // Si ya hay resultados cargados en pantalla para esta búsqueda, ir inmediatamente al primero
                 if (!resultsBox.classList.contains('hidden') && state.lastSearchResults[mapNum].length > 0) {
                     selectSearchResult(mapNum, state.lastSearchResults[mapNum][0], true);
                 } else {
@@ -1045,7 +1198,6 @@
             clearBtn.addEventListener('click', () => clearSearchMap(mapNum, true));
         });
 
-        // Cerrar desplegables de búsqueda al hacer clic fuera
         document.addEventListener('click', (e) => {
             [1, 2].forEach(num => {
                 const form = document.getElementById(`searchForm${num}`);
@@ -1057,7 +1209,7 @@
         });
 
         /**************************************************************************
-         * GESTIÓN DE CAMBIO DE VISTA (CALLES, SATÉLITE, HÍBRIDO, TERRENO)
+         * GESTIÓN DE CAPAS (CALLES, SATÉLITE, HÍBRIDO, TERRENO)
          **************************************************************************/
         function setMapLayer(mapNumber, layerType, broadcast = true) {
             if (mapNumber === 1) {
@@ -1073,11 +1225,7 @@
             }
 
             if (broadcast) {
-                syncChannel.postMessage({
-                    type: 'LAYER_CHANGE',
-                    mapNumber,
-                    layerType
-                });
+                syncChannel.postMessage({ type: 'LAYER_CHANGE', mapNumber, layerType });
             }
         }
 
@@ -1088,15 +1236,11 @@
             buttons.forEach(btn => {
                 const isTarget = btn.getAttribute('data-layer') === activeLayer;
                 btn.classList.remove('bg-blue-600', 'bg-emerald-600', 'text-white', 'shadow', 'text-slate-400');
-                if (isTarget) {
-                    btn.classList.add(activeColorClass, 'text-white', 'shadow');
-                } else {
-                    btn.classList.add('text-slate-400');
-                }
+                if (isTarget) btn.classList.add(activeColorClass, 'text-white', 'shadow');
+                else btn.classList.add('text-slate-400');
             });
         }
 
-        // Eventos para los selectores de vista de ambos mapas
         document.querySelectorAll('.layer-btn-1').forEach(btn => {
             btn.addEventListener('click', () => setMapLayer(1, btn.dataset.layer));
         });
@@ -1105,7 +1249,7 @@
         });
 
         /**************************************************************************
-         * LÓGICA DE SINCRONIZACIÓN DE ZOOM Y MOVIMIENTO RELATIVO (PAN OFFSET)
+         * SINCRONIZACIÓN DE ZOOM Y PAN RELATIVO
          **************************************************************************/
         function updateZoomBadge(zoomVal) {
             document.getElementById('zoomLevelDisplay').textContent = Number(zoomVal).toFixed(1);
@@ -1118,7 +1262,6 @@
             document.getElementById('coordsMap2').textContent = `${c2.lat.toFixed(4)}, ${c2.lng.toFixed(4)}`;
         }
 
-        // Sincroniza desde un mapa origen hacia el mapa destino aplicando desplazamiento relativo (delta) sin igualar coordenadas
         function handleMapSync(sourceMap, targetMap, sourceId) {
             updateCoordsDisplay();
             const currentZoom = sourceMap.getZoom();
@@ -1129,7 +1272,6 @@
             const dLat = currentCenter.lat - lastSourceCenter.lat;
             const dLng = currentCenter.lng - lastSourceCenter.lng;
 
-            // Actualizar siempre el último centro registrado del mapa origen
             if (sourceId === 'map1') {
                 state.lastCenter1 = { lat: currentCenter.lat, lng: currentCenter.lng };
             } else {
@@ -1141,8 +1283,6 @@
             state.isProgrammaticMove = true;
 
             const targetCenter = targetMap.getCenter();
-            // Calcular nueva posición desplazada para el mapa destino conservando su ubicación independiente
-            // Ajustamos dLng según la relación de cosenos de latitud para que la distancia física recorrida sea equivalente
             const cosSource = Math.max(0.15, Math.cos(currentCenter.lat * Math.PI / 180));
             const cosTarget = Math.max(0.15, Math.cos(targetCenter.lat * Math.PI / 180));
             const adjustedDLng = dLng * (cosSource / cosTarget);
@@ -1151,19 +1291,15 @@
             const nextTargetLng = targetCenter.lng + adjustedDLng;
             const hasMoved = Math.abs(dLat) > 1e-9 || Math.abs(dLng) > 1e-9;
 
-            // 1. Sincronización local (entre Mapa 1 y Mapa 2 en la misma página)
             if (state.syncZoom && state.syncPan) {
                 const newPos = hasMoved ? [nextTargetLat, nextTargetLng] : [targetCenter.lat, targetCenter.lng];
                 targetMap.setView(newPos, currentZoom, { animate: false });
             } else if (state.syncZoom) {
-                if (targetMap.getZoom() !== currentZoom) {
-                    targetMap.setZoom(currentZoom, { animate: false });
-                }
+                if (targetMap.getZoom() !== currentZoom) targetMap.setZoom(currentZoom, { animate: false });
             } else if (state.syncPan && hasMoved) {
                 targetMap.setView([nextTargetLat, nextTargetLng], targetMap.getZoom(), { animate: false });
             }
 
-            // Actualizar el centro guardado del mapa destino tras aplicar el desplazamiento relativo
             const updatedTargetCenter = targetMap.getCenter();
             if (sourceId === 'map1') {
                 state.lastCenter2 = { lat: updatedTargetCenter.lat, lng: updatedTargetCenter.lng };
@@ -1171,7 +1307,6 @@
                 state.lastCenter1 = { lat: updatedTargetCenter.lat, lng: updatedTargetCenter.lng };
             }
 
-            // 2. Sincronización con ventana emergente externa mediante BroadcastChannel (enviando delta relativo)
             syncChannel.postMessage({
                 type: 'MAP_VIEW_CHANGE',
                 sourceId,
@@ -1189,24 +1324,17 @@
             });
         }
 
-        // Escuchar eventos de zoom y movimiento en ambos mapas
         map1.on('zoom move', () => handleMapSync(map1, map2, 'map1'));
         map2.on('zoom move', () => handleMapSync(map2, map1, 'map2'));
 
         /**************************************************************************
-         * HERRAMIENTA DE MEDICIÓN DE DISTANCIA SINCRONIZADA EN AMBOS MAPAS
+         * MEDIDOR DE DISTANCIA
          **************************************************************************/
         function formatDistance(meters) {
             if (meters >= 1000) {
-                return {
-                    primary: `${(meters / 1000).toFixed(2)} km`,
-                    secondary: `(${Math.round(meters).toLocaleString('es-ES')} m)`
-                };
+                return { primary: `${(meters / 1000).toFixed(2)} km`, secondary: `(${Math.round(meters).toLocaleString('es-ES')} m)` };
             }
-            return {
-                primary: `${meters.toFixed(1)} m`,
-                secondary: `(${(meters / 1000).toFixed(3)} km)`
-            };
+            return { primary: `${meters.toFixed(1)} m`, secondary: `(${(meters / 1000).toFixed(3)} km)` };
         }
 
         function createMarkerIcon(index, isLast) {
@@ -1225,22 +1353,10 @@
 
             const latLngs = pts.map(p => [p.lat, p.lng]);
 
-            // Polilínea principal con borde de contraste y línea punteada interior
             if (pts.length > 1) {
-                L.polyline(latLngs, {
-                    color: '#0f172a',
-                    weight: 6,
-                    opacity: 0.7
-                }).addTo(targetLayerGroup);
+                L.polyline(latLngs, { color: '#0f172a', weight: 6, opacity: 0.7 }).addTo(targetLayerGroup);
+                L.polyline(latLngs, { color: '#f43f5e', weight: 3.5, dashArray: '8, 6', opacity: 1 }).addTo(targetLayerGroup);
 
-                L.polyline(latLngs, {
-                    color: '#f43f5e',
-                    weight: 3.5,
-                    dashArray: '8, 6',
-                    opacity: 1
-                }).addTo(targetLayerGroup);
-
-                // Etiquetas de distancia en el punto medio de cada segmento
                 for (let i = 1; i < pts.length; i++) {
                     const p1 = L.latLng(pts[i - 1].lat, pts[i - 1].lng);
                     const p2 = L.latLng(pts[i].lat, pts[i].lng);
@@ -1248,27 +1364,17 @@
                     const midLat = (p1.lat + p2.lat) / 2;
                     const midLng = (p1.lng + p2.lng) / 2;
 
-                    const labelText = segDist >= 1000
-                        ? `${(segDist / 1000).toFixed(2)} km`
-                        : `${Math.round(segDist)} m`;
+                    const labelText = segDist >= 1000 ? `${(segDist / 1000).toFixed(2)} km` : `${Math.round(segDist)} m`;
 
-                    L.tooltip({
-                        permanent: true,
-                        direction: 'center',
-                        className: 'segment-tooltip'
-                    })
-                    .setLatLng([midLat, midLng])
-                    .setContent(labelText)
-                    .addTo(targetLayerGroup);
+                    L.tooltip({ permanent: true, direction: 'center', className: 'segment-tooltip' })
+                        .setLatLng([midLat, midLng])
+                        .setContent(labelText)
+                        .addTo(targetLayerGroup);
                 }
             }
 
-            // Marcadores numerados en cada vértice
             pts.forEach((pt, idx) => {
-                L.marker([pt.lat, pt.lng], {
-                    icon: createMarkerIcon(idx, idx === pts.length - 1),
-                    interactive: false
-                }).addTo(targetLayerGroup);
+                L.marker([pt.lat, pt.lng], { icon: createMarkerIcon(idx, idx === pts.length - 1), interactive: false }).addTo(targetLayerGroup);
             });
         }
 
@@ -1279,10 +1385,7 @@
             const pts = state.measurePoints;
             let totalMeters = 0;
             for (let i = 1; i < pts.length; i++) {
-                totalMeters += map1.distance(
-                    [pts[i - 1].lat, pts[i - 1].lng],
-                    [pts[i].lat, pts[i].lng]
-                );
+                totalMeters += map1.distance([pts[i - 1].lat, pts[i - 1].lng], [pts[i].lat, pts[i].lng]);
             }
 
             const formatted = formatDistance(totalMeters);
@@ -1303,13 +1406,8 @@
         function addMeasurementPoint(latlng, broadcast = true) {
             state.measurePoints.push({ lat: latlng.lat, lng: latlng.lng });
             updateMeasurementUI();
-
             if (broadcast) {
-                syncChannel.postMessage({
-                    type: 'MEASURE_UPDATE',
-                    points: state.measurePoints,
-                    isMeasuring: state.isMeasuring
-                });
+                syncChannel.postMessage({ type: 'MEASURE_UPDATE', points: state.measurePoints, isMeasuring: state.isMeasuring });
             }
         }
 
@@ -1317,17 +1415,12 @@
             state.measurePoints = [];
             updateMeasurementUI();
             if (broadcast) {
-                syncChannel.postMessage({
-                    type: 'MEASURE_UPDATE',
-                    points: [],
-                    isMeasuring: state.isMeasuring
-                });
+                syncChannel.postMessage({ type: 'MEASURE_UPDATE', points: [], isMeasuring: state.isMeasuring });
             }
         }
 
         function toggleMeasureMode(forceState, broadcast = true) {
             state.isMeasuring = typeof forceState === 'boolean' ? forceState : !state.isMeasuring;
-            
             const btn = document.getElementById('btnMeasureMode');
             const dock = document.getElementById('measurementDock');
             const container = document.getElementById('mapsGridContainer');
@@ -1336,7 +1429,7 @@
                 btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-rose-600 border-rose-500 text-white shadow-md shadow-rose-600/30';
                 dock.classList.remove('hidden');
                 container.classList.add('measuring-cursor');
-                showToast('Modo medición activo: haz clic en cualquier mapa para añadir puntos');
+                showToast('Modo medición activo');
             } else {
                 btn.className = 'flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border bg-slate-800/90 border-slate-700 text-slate-200 hover:border-rose-500/50';
                 dock.classList.add('hidden');
@@ -1344,23 +1437,15 @@
             }
 
             if (broadcast) {
-                syncChannel.postMessage({
-                    type: 'MEASURE_MODE_TOGGLE',
-                    isMeasuring: state.isMeasuring
-                });
+                syncChannel.postMessage({ type: 'MEASURE_MODE_TOGGLE', isMeasuring: state.isMeasuring });
             }
         }
 
-        // Clic en cualquiera de los dos mapas para añadir puntos de medición
-        map1.on('click', (e) => {
-            if (state.isMeasuring) addMeasurementPoint(e.latlng, true);
-        });
-        map2.on('click', (e) => {
-            if (state.isMeasuring) addMeasurementPoint(e.latlng, true);
-        });
+        map1.on('click', (e) => { if (state.isMeasuring) addMeasurementPoint(e.latlng, true); });
+        map2.on('click', (e) => { if (state.isMeasuring) addMeasurementPoint(e.latlng, true); });
 
         /**************************************************************************
-         * CONTROLES DE INTERFAZ Y VENTANA EMERGENTE (POPUP WINDOW)
+         * CONTROLES DE INTERFAZ, MODO LIMPIO Y VENTANA EMERGENTE
          **************************************************************************/
         function showToast(message) {
             const toast = document.getElementById('toastNotification');
@@ -1408,7 +1493,6 @@
             }
         }
 
-        // Botón Zoom Sincronizado
         document.getElementById('btnSyncZoom').addEventListener('click', () => {
             state.syncZoom = !state.syncZoom;
             updateSyncButtonsUI();
@@ -1423,35 +1507,23 @@
             syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
         });
 
-        // Botón Posición Sincronizada (Pan Relativo sin igualar coordenadas)
         document.getElementById('btnSyncPan').addEventListener('click', () => {
             state.syncPan = !state.syncPan;
-            // Sincronizar las referencias actuales para que empiece a desplazar relativamente desde donde está cada mapa
             state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
             state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
             updateSyncButtonsUI();
-            if (state.syncPan) {
-                showToast('Posición sincronizada activa (desplazamiento relativo conservando cada lugar)');
-            } else {
-                showToast('Posición sincronizada desactivada (movimiento independiente)');
-            }
+            showToast(state.syncPan ? 'Posición sincronizada activa' : 'Posición independiente');
             syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
         });
 
-        // Botón Giro / Norte Sincronizado
         document.getElementById('btnSyncBearing').addEventListener('click', () => {
             state.syncBearing = !state.syncBearing;
             updateSyncButtonsUI();
-            if (state.syncBearing) {
-                applyMapBearing(2, state.map1Bearing, true, false);
-                showToast('Giro del Norte sincronizado entre ambos mapas');
-            } else {
-                showToast('Giro del Norte independiente en cada mapa');
-            }
+            if (state.syncBearing) applyMapBearing(2, state.map1Bearing, true, false);
+            showToast(state.syncBearing ? 'Giro sincronizado' : 'Giro independiente');
             syncChannel.postMessage({ type: 'SYNC_SETTINGS', syncZoom: state.syncZoom, syncPan: state.syncPan, syncBearing: state.syncBearing });
         });
 
-        // Botón Igualar vistas ahora (copia centro, zoom y giro del Mapa 1 al Mapa 2 bajo petición explícita)
         document.getElementById('btnAlignNow').addEventListener('click', () => {
             state.isProgrammaticMove = true;
             map2.setView(map1.getCenter(), map1.getZoom(), { animate: true });
@@ -1459,18 +1531,10 @@
             state.lastCenter1 = { lat: map1.getCenter().lat, lng: map1.getCenter().lng };
             state.lastCenter2 = { lat: map2.getCenter().lat, lng: map2.getCenter().lng };
             state.isProgrammaticMove = false;
-            syncChannel.postMessage({
-                type: 'FORCE_ALIGN',
-                center: map1.getCenter(),
-                zoom: map1.getZoom(),
-                bearing: state.map1Bearing
-            });
-            showToast('Ambos mapas alineados a la misma posición, zoom y orientación');
+            syncChannel.postMessage({ type: 'FORCE_ALIGN', center: map1.getCenter(), zoom: map1.getZoom(), bearing: state.map1Bearing });
+            showToast('Mapas alineados');
         });
 
-        /**************************************************************************
-         * MODO LIMPIO (OCULTAR CONTROLES EN CADA MAPA) Y DIVISIÓN HORIZONTAL/VERTICAL
-         **************************************************************************/
         function setMapCleanMode(mapNum, isClean) {
             state.cleanMode[mapNum] = isClean;
             const panel = document.getElementById(`panelMap${mapNum}`);
@@ -1496,35 +1560,16 @@
                 iconBtn.className = `fa-solid fa-eye-slash text-xs ${mapNum === 1 ? 'text-blue-400' : 'text-emerald-400'}`;
                 btnClean.classList.remove('opacity-60', 'hover:opacity-100');
             }
-
-            // Actualizar icono del botón global si ambos están ocultos
-            const bothClean = state.cleanMode[1] && state.cleanMode[2];
-            const globalIcon = document.getElementById('iconAllCleanMode');
-            if (globalIcon) {
-                globalIcon.className = bothClean ? 'fa-solid fa-eye text-amber-400' : 'fa-solid fa-eye-slash';
-            }
         }
 
-        document.getElementById('btnCleanMap1').addEventListener('click', () => {
-            const nextState = !state.cleanMode[1];
-            setMapCleanMode(1, nextState);
-            showToast(nextState ? 'Controles del Mapa 1 ocultos (Modo Limpio)' : 'Controles del Mapa 1 visibles');
-        });
-
-        document.getElementById('btnCleanMap2').addEventListener('click', () => {
-            const nextState = !state.cleanMode[2];
-            setMapCleanMode(2, nextState);
-            showToast(nextState ? 'Controles del Mapa 2 ocultos (Modo Limpio)' : 'Controles del Mapa 2 visibles');
-        });
-
+        document.getElementById('btnCleanMap1').addEventListener('click', () => setMapCleanMode(1, !state.cleanMode[1]));
+        document.getElementById('btnCleanMap2').addEventListener('click', () => setMapCleanMode(2, !state.cleanMode[2]));
         document.getElementById('btnToggleAllCleanMode').addEventListener('click', () => {
             const targetClean = !(state.cleanMode[1] && state.cleanMode[2]);
             setMapCleanMode(1, targetClean);
             setMapCleanMode(2, targetClean);
-            showToast(targetClean ? 'Modo Limpio activado en ambos mapas' : 'Controles restaurados en ambos mapas');
         });
 
-        // Alternar división de pantalla entre Vertical (Lado a Lado) y Horizontal (Arriba y Abajo)
         function applySplitDirection(direction) {
             state.splitDirection = direction;
             const container = document.getElementById('mapsGridContainer');
@@ -1539,7 +1584,6 @@
                 panel1.classList.add('border-b');
                 icon.className = 'fa-solid fa-bars text-cyan-400';
                 text.textContent = 'Arriba / Abajo';
-                showToast('División Horizontal (Arriba y Abajo)');
             } else {
                 container.classList.remove('flex-col');
                 container.classList.add('flex-row');
@@ -1547,26 +1591,15 @@
                 panel1.classList.add('border-r');
                 icon.className = 'fa-solid fa-table-columns text-cyan-400';
                 text.textContent = 'Lado a Lado';
-                showToast('División Vertical (Lado a Lado)');
             }
 
-            // Recalcular tamaño de los lienzos de Leaflet para evitar zonas grises
-            setTimeout(() => {
-                map1.invalidateSize();
-                map2.invalidateSize();
-            }, 180);
-            setTimeout(() => {
-                map1.invalidateSize();
-                map2.invalidateSize();
-            }, 350);
+            setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 180);
         }
 
         document.getElementById('btnToggleSplitLayout').addEventListener('click', () => {
-            const nextDir = state.splitDirection === 'vertical' ? 'horizontal' : 'vertical';
-            applySplitDirection(nextDir);
+            applySplitDirection(state.splitDirection === 'vertical' ? 'horizontal' : 'vertical');
         });
 
-        // Botón Centrar en Leganés / Madrid
         document.getElementById('btnResetCenter').addEventListener('click', () => {
             state.isProgrammaticMove = true;
             map1.setView(INITIAL_CENTER, INITIAL_ZOOM, { animate: true });
@@ -1574,117 +1607,69 @@
             state.lastCenter1 = { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] };
             state.lastCenter2 = { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] };
             state.isProgrammaticMove = false;
-            syncChannel.postMessage({
-                type: 'FORCE_ALIGN',
-                center: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
-                zoom: INITIAL_ZOOM
-            });
+            syncChannel.postMessage({ type: 'FORCE_ALIGN', center: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] }, zoom: INITIAL_ZOOM });
             showToast('Centrado en Leganés / Madrid');
         });
 
-        // Controles de Medición
         document.getElementById('btnMeasureMode').addEventListener('click', () => toggleMeasureMode());
         document.getElementById('btnCloseMeasureDock').addEventListener('click', () => toggleMeasureMode(false));
         document.getElementById('btnClearMeasure').addEventListener('click', () => clearMeasurements(true));
         document.getElementById('btnUndoMeasure').addEventListener('click', () => {
             state.measurePoints.pop();
             updateMeasurementUI();
-            syncChannel.postMessage({
-                type: 'MEASURE_UPDATE',
-                points: state.measurePoints,
-                isMeasuring: state.isMeasuring
-            });
+            syncChannel.postMessage({ type: 'MEASURE_UPDATE', points: state.measurePoints, isMeasuring: state.isMeasuring });
         });
 
-        // Tecla ESC para salir del modo medición
         window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && state.isMeasuring) {
-                toggleMeasureMode(false);
-            }
+            if (e.key === 'Escape' && state.isMeasuring) toggleMeasureMode(false);
         });
 
-        /**************************************************************************
-         * MODO 2 VENTANAS SEPARADAS DEL NAVEGADOR (POPUP + BROADCASTCHANNEL)
-         **************************************************************************/
         function applySingleMapLayout(whichMap) {
             const p1 = document.getElementById('panelMap1');
             const p2 = document.getElementById('panelMap2');
-
-            if (whichMap === 1) {
-                p1.classList.remove('hidden');
-                p2.classList.add('hidden');
-            } else if (whichMap === 2) {
-                p1.classList.add('hidden');
-                p2.classList.remove('hidden');
-            } else {
-                p1.classList.remove('hidden');
-                p2.classList.remove('hidden');
-            }
-
-            setTimeout(() => {
-                map1.invalidateSize();
-                map2.invalidateSize();
-            }, 150);
+            if (whichMap === 1) { p1.classList.remove('hidden'); p2.classList.add('hidden'); }
+            else if (whichMap === 2) { p1.classList.add('hidden'); p2.classList.remove('hidden'); }
+            else { p1.classList.remove('hidden'); p2.classList.remove('hidden'); }
+            setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 150);
         }
 
-        // Configurar si esta instancia se abrió como la 2ª ventana emergente
-        if (windowRole === 'popup_map2') {
+        if (urlParams.get('role') === 'popup_map2') {
             document.title = 'Mapa 2 (Ventana Sincronizada) - GeoSync Dual';
             document.getElementById('windowRoleBadge').classList.remove('hidden');
             document.getElementById('btnPopupWindow').classList.add('hidden');
             applySingleMapLayout(2);
-
-            // Avisar a la ventana principal de que la ventana secundaria está lista
             syncChannel.postMessage({ type: 'POPUP_OPENED' });
-
-            window.addEventListener('beforeunload', () => {
-                syncChannel.postMessage({ type: 'POPUP_CLOSED' });
-            });
+            window.addEventListener('beforeunload', () => syncChannel.postMessage({ type: 'POPUP_CLOSED' }));
         }
 
-        // Botón para abrir la segunda ventana emergente o restaurar vista dividida
         document.getElementById('btnPopupWindow').addEventListener('click', () => {
             if (state.externalPopupRef && !state.externalPopupRef.closed) {
                 state.externalPopupRef.close();
                 state.externalPopupRef = null;
                 applySingleMapLayout('both');
                 document.getElementById('popupBtnText').textContent = 'Abrir en 2ª Ventana';
-                showToast('Vista dividida restaurada en una sola ventana');
                 return;
             }
 
             const popupUrl = new URL(window.location.href);
             popupUrl.searchParams.set('role', 'popup_map2');
-
             const width = Math.min(900, window.screen.availWidth * 0.48);
             const height = Math.min(780, window.screen.availHeight * 0.85);
-            const left = window.screenX + window.outerWidth - width - 20;
-            const top = window.screenY + 40;
-
-            const popup = window.open(
-                popupUrl.toString(),
-                'GeoSyncMap2Window',
-                `width=${Math.round(width)},height=${Math.round(height)},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=no`
-            );
-
+            const popup = window.open(popupUrl.toString(), 'GeoSyncMap2Window', `width=${Math.round(width)},height=${Math.round(height)},resizable=yes`);
             if (popup) {
                 state.externalPopupRef = popup;
-                applySingleMapLayout(1); // Deja el Mapa 1 a pantalla completa en la ventana principal
+                applySingleMapLayout(1);
                 document.getElementById('popupBtnText').textContent = 'Unir Ventanas';
-                showToast('Mapa 2 abierto en ventana independiente sincronizada');
-            } else {
-                showToast('El navegador bloqueó la ventana emergente. Permítela e inténtalo de nuevo.');
+                showToast('Mapa 2 abierto en 2ª ventana');
             }
         });
 
-        // Recepción de eventos entre ventanas separadas vía BroadcastChannel
         syncChannel.onmessage = (event) => {
             const data = event.data;
             if (!data || !data.type) return;
 
             switch (data.type) {
                 case 'POPUP_OPENED':
-                    // Enviar estado actual a la ventana recién abierta
                     syncChannel.postMessage({
                         type: 'INIT_STATE',
                         center: map1.getCenter(),
@@ -1693,35 +1678,36 @@
                         syncPan: state.syncPan,
                         map1LayerType: state.map1LayerType,
                         map2LayerType: state.map2LayerType,
+                        map1Proj: state.map1Proj,
+                        map2Proj: state.map2Proj,
                         measurePoints: state.measurePoints,
                         isMeasuring: state.isMeasuring
                     });
                     break;
-
                 case 'POPUP_CLOSED':
                     state.externalPopupRef = null;
                     applySingleMapLayout('both');
                     document.getElementById('popupBtnText').textContent = 'Abrir en 2ª Ventana';
-                    showToast('Ventana secundaria cerrada: vista dual restaurada');
                     break;
-
                 case 'INIT_STATE':
                     state.syncZoom = data.syncZoom;
                     state.syncPan = data.syncPan;
                     updateSyncButtonsUI();
+                    if (data.map1Proj && data.map1Proj !== state.map1Proj) setMapProjection(1, data.map1Proj, false);
+                    if (data.map2Proj && data.map2Proj !== state.map2Proj) setMapProjection(2, data.map2Proj, false);
                     setMapLayer(1, data.map1LayerType, false);
                     setMapLayer(2, data.map2LayerType, false);
                     state.isProgrammaticMove = true;
                     map1.setView(data.center, data.zoom, { animate: false });
                     map2.setView(data.center, data.zoom, { animate: false });
-                    state.lastCenter1 = { lat: data.center.lat, lng: data.center.lng };
-                    state.lastCenter2 = { lat: data.center.lat, lng: data.center.lng };
                     state.isProgrammaticMove = false;
                     state.measurePoints = data.measurePoints || [];
                     updateMeasurementUI();
                     if (data.isMeasuring) toggleMeasureMode(true, false);
                     break;
-
+                case 'PROJECTION_CHANGE':
+                    setMapProjection(data.mapNum, data.projKey, false);
+                    break;
                 case 'MAP_VIEW_CHANGE':
                     state.isProgrammaticMove = true;
                     [map1, map2].forEach((m, idx) => {
@@ -1746,55 +1732,42 @@
                     updateCoordsDisplay();
                     requestAnimationFrame(() => { state.isProgrammaticMove = false; });
                     break;
-
                 case 'FORCE_ALIGN':
                     state.isProgrammaticMove = true;
                     map1.setView(data.center, data.zoom, { animate: true });
                     map2.setView(data.center, data.zoom, { animate: true });
                     state.lastCenter1 = { lat: data.center.lat, lng: data.center.lng };
                     state.lastCenter2 = { lat: data.center.lat, lng: data.center.lng };
-                    if (typeof data.bearing === 'number') {
-                        applyMapBearing(1, data.bearing, false, false);
-                        applyMapBearing(2, data.bearing, false, false);
-                    }
                     state.isProgrammaticMove = false;
                     break;
-
                 case 'SYNC_SETTINGS':
                     state.syncZoom = data.syncZoom;
                     state.syncPan = data.syncPan;
                     if (typeof data.syncBearing === 'boolean') state.syncBearing = data.syncBearing;
                     updateSyncButtonsUI();
                     break;
-
                 case 'BEARING_CHANGE':
                     applyMapBearing(data.mapNum, data.bearing, false, data.syncBearing);
                     break;
-
                 case 'LAYER_CHANGE':
                     setMapLayer(data.mapNumber, data.layerType, false);
                     break;
-
                 case 'MEASURE_MODE_TOGGLE':
                     toggleMeasureMode(data.isMeasuring, false);
                     break;
-
                 case 'MEASURE_UPDATE':
                     state.measurePoints = data.points || [];
                     updateMeasurementUI();
                     break;
-
                 case 'SEARCH_RESULT_SELECTED':
                     selectSearchResult(data.mapNum, data.item, false);
                     break;
-
                 case 'SEARCH_CLEAR':
                     clearSearchMap(data.mapNum, false);
                     break;
             }
         };
 
-        // Ajuste responsivo al redimensionar la ventana
         window.addEventListener('resize', () => {
             map1.invalidateSize();
             map2.invalidateSize();
