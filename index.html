@@ -242,16 +242,25 @@
     <main id="mapsGridContainer" class="flex-1 flex flex-row relative overflow-hidden bg-slate-950">
         
         <!-- ==================== PANEL MAPA 1 ==================== -->
-        <section id="panelMap1" class="relative flex-1 w-full h-full border-r border-slate-800 transition-all duration-300 overflow-hidden bg-slate-950">
+        <section id="panelMap1" class="relative flex-1 w-full h-full border-r border-slate-800 transition-all duration-300 overflow-hidden bg-slate-950 map-ui-hidden">
             <div id="map1" class="w-full h-full z-10"></div>
 
-            <!-- Botón Ocultar/Mostrar Controles (Modo Limpio) -->
-            <button id="btnCleanMap1" data-tooltip="Ocultar o mostrar controles del Mapa 1" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
-                <i id="iconCleanMap1" class="fa-solid fa-eye-slash text-xs text-blue-400"></i>
+            <!-- Cruz Central Fija (Retícula de Precisión) -->
+            <div class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center">
+                <div class="relative w-5 h-5 flex items-center justify-center">
+                    <div class="absolute w-full h-[1.5px] bg-blue-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                    <div class="absolute h-full w-[1.5px] bg-blue-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                    <div class="w-1.5 h-1.5 rounded-full border border-white/90 bg-blue-500/40"></div>
+                </div>
+            </div>
+
+            <!-- Botón Ocultar/Mostrar Controles (Modo Limpio - Oculto por defecto) -->
+            <button id="btnCleanMap1" data-tooltip="Ocultar o mostrar controles del Mapa 1" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto opacity-70 hover:opacity-100">
+                <i id="iconCleanMap1" class="fa-solid fa-eye text-xs text-amber-400"></i>
             </button>
 
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Escala + Capas + Buscador Mapa 1 -->
-            <div id="uiTopOverlay1" class="absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
+            <!-- Tarjeta Flotante Superior: Identificador + Selector de Escala + Capas + Buscador Mapa 1 (Oculta por defecto) -->
+            <div id="uiTopOverlay1" class="hidden absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
                 <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
                     <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
                         <span class="w-2 h-2 rounded-full bg-blue-400"></span>
@@ -293,8 +302,8 @@
                 </div>
             </div>
 
-            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 1) -->
-            <div id="uiCompassOverlay1" class="absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
+            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 1 - Oculto por defecto) -->
+            <div id="uiCompassOverlay1" class="hidden absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
                 <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
                     <button id="btnResetNorth1" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
                         <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
@@ -326,48 +335,53 @@
                 </div>
             </div>
 
-            <!-- Barra inferior de coordenadas del Mapa 1 -->
-            <div id="uiCoordsOverlay1" class="absolute bottom-2.5 left-2.5 z-[500] pointer-events-none hidden sm:flex flex-wrap items-center gap-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
-                <i class="fa-solid fa-compass text-blue-400"></i>
-                <span id="coordsMap1">40.3280, -3.7645</span>
-                <span id="scaleBadgeMap1" class="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px]">Mercator ×1.31</span>
+            <!-- Barra inferior compacta: Altitud s.n.m. + Coordenadas del Mapa 1 (Siempre visible en la base) -->
+            <div id="uiCoordsOverlay1" class="absolute bottom-2 left-2 z-[500] pointer-events-none flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md px-2 py-0.5 rounded-md border border-slate-800/90 text-[10px] font-mono text-slate-300 shadow">
+                <span class="text-blue-400 font-semibold flex items-center gap-1" title="Altitud del punto central sobre el nivel del mar">
+                    <i class="fa-solid fa-mountain text-[9px]"></i>
+                    <span id="elevMap1">-- m</span>
+                </span>
+                <span class="text-slate-600">|</span>
+                <span id="coordsMap1" class="text-slate-400">40.3280, -3.7645</span>
+                <span id="scaleBadgeMap1" class="hidden md:inline px-1 rounded bg-blue-500/15 text-blue-300 text-[9px]">Mercator ×1.31</span>
             </div>
 
-            <!-- Tarjeta Flotante de Medición Independiente - MAPA 1 -->
-            <div id="measureCard1" class="hidden absolute bottom-11 left-2.5 z-[550] bg-slate-900/95 backdrop-blur-xl border border-blue-500/40 rounded-xl p-2.5 shadow-2xl w-64 pointer-events-auto">
-                <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-300">Medida Mapa 1</span>
-                        <span id="measureCount1" class="text-[10px] font-mono text-slate-400">(0 pts)</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <button id="btnUndoMeasure1" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] disabled:opacity-40" disabled>
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </button>
-                        <button id="btnClearMeasure1" class="px-1.5 py-0.5 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-[10px] transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="mt-1.5 flex items-baseline justify-between">
-                    <span id="distPrimary1" class="font-mono text-base font-bold text-white">0.00 m</span>
-                    <span id="distSecondary1" class="font-mono text-[10px] text-slate-400">(0.000 km)</span>
+            <!-- Tarjeta Flotante de Medición Ultra-Compacta - MAPA 1 -->
+            <div id="measureCard1" class="hidden absolute bottom-8 left-2 z-[550] bg-slate-900/95 backdrop-blur-xl border border-blue-500/40 rounded-lg px-2 py-1 shadow-xl pointer-events-auto flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                <span id="distPrimary1" class="font-mono text-xs font-bold text-white">0.0 m</span>
+                <span id="measureCount1" class="font-mono text-[9px] text-slate-400">(0)</span>
+                <div class="flex items-center gap-1 ml-0.5">
+                    <button id="btnUndoMeasure1" title="Deshacer punto" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] disabled:opacity-40" disabled>
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button id="btnClearMeasure1" title="Borrar medición" class="px-1.5 py-0.5 rounded bg-rose-600/25 hover:bg-rose-600 text-rose-300 hover:text-white text-[9px] transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
             </div>
         </section>
 
         <!-- ==================== PANEL MAPA 2 ==================== -->
-        <section id="panelMap2" class="relative flex-1 w-full h-full transition-all duration-300 overflow-hidden bg-slate-950">
+        <section id="panelMap2" class="relative flex-1 w-full h-full transition-all duration-300 overflow-hidden bg-slate-950 map-ui-hidden">
             <div id="map2" class="w-full h-full z-10"></div>
 
-            <!-- Botón Ocultar/Mostrar Controles (Modo Limpio) -->
-            <button id="btnCleanMap2" data-tooltip="Ocultar o mostrar controles del Mapa 2" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto">
-                <i id="iconCleanMap2" class="fa-solid fa-eye-slash text-xs text-emerald-400"></i>
+            <!-- Cruz Central Fija (Retícula de Precisión) -->
+            <div class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center">
+                <div class="relative w-5 h-5 flex items-center justify-center">
+                    <div class="absolute w-full h-[1.5px] bg-emerald-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                    <div class="absolute h-full w-[1.5px] bg-emerald-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                    <div class="w-1.5 h-1.5 rounded-full border border-white/90 bg-emerald-500/40"></div>
+                </div>
+            </div>
+
+            <!-- Botón Ocultar/Mostrar Controles (Modo Limpio - Oculto por defecto) -->
+            <button id="btnCleanMap2" data-tooltip="Ocultar o mostrar controles del Mapa 2" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto opacity-70 hover:opacity-100">
+                <i id="iconCleanMap2" class="fa-solid fa-eye text-xs text-amber-400"></i>
             </button>
 
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Escala + Capas + Buscador Mapa 2 -->
-            <div id="uiTopOverlay2" class="absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
+            <!-- Tarjeta Flotante Superior: Identificador + Selector de Escala + Capas + Buscador Mapa 2 (Oculta por defecto) -->
+            <div id="uiTopOverlay2" class="hidden absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
                 <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
                     <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                         <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -409,8 +423,8 @@
                 </div>
             </div>
 
-            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 2) -->
-            <div id="uiCompassOverlay2" class="absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
+            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 2 - Oculto por defecto) -->
+            <div id="uiCompassOverlay2" class="hidden absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
                 <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
                     <button id="btnResetNorth2" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
                         <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
@@ -442,33 +456,29 @@
                 </div>
             </div>
 
-            <!-- Barra inferior de coordenadas del Mapa 2 -->
-            <div id="uiCoordsOverlay2" class="absolute bottom-2.5 left-2.5 z-[500] pointer-events-none hidden sm:flex flex-wrap items-center gap-2 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-300 shadow">
-                <i class="fa-solid fa-compass text-emerald-400"></i>
-                <span id="coordsMap2">40.3280, -3.7645</span>
-                <span id="scaleBadgeMap2" class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">Escala Real (1:1)</span>
+            <!-- Barra inferior compacta: Altitud s.n.m. + Coordenadas del Mapa 2 (Siempre visible en la base) -->
+            <div id="uiCoordsOverlay2" class="absolute bottom-2 left-2 z-[500] pointer-events-none flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md px-2 py-0.5 rounded-md border border-slate-800/90 text-[10px] font-mono text-slate-300 shadow">
+                <span class="text-emerald-400 font-semibold flex items-center gap-1" title="Altitud del punto central sobre el nivel del mar">
+                    <i class="fa-solid fa-mountain text-[9px]"></i>
+                    <span id="elevMap2">-- m</span>
+                </span>
+                <span class="text-slate-600">|</span>
+                <span id="coordsMap2" class="text-slate-400">40.3280, -3.7645</span>
+                <span id="scaleBadgeMap2" class="hidden md:inline px-1 rounded bg-emerald-500/15 text-emerald-300 text-[9px]">Escala Real (1:1)</span>
             </div>
 
-            <!-- Tarjeta Flotante de Medición Independiente - MAPA 2 -->
-            <div id="measureCard2" class="hidden absolute bottom-11 left-2.5 z-[550] bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-xl p-2.5 shadow-2xl w-64 pointer-events-auto">
-                <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-1.5">
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-300">Medida Mapa 2</span>
-                        <span id="measureCount2" class="text-[10px] font-mono text-slate-400">(0 pts)</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <button id="btnUndoMeasure2" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] disabled:opacity-40" disabled>
-                            <i class="fa-solid fa-rotate-left"></i>
-                        </button>
-                        <button id="btnClearMeasure2" class="px-1.5 py-0.5 rounded bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white text-[10px] transition">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="mt-1.5 flex items-baseline justify-between">
-                    <span id="distPrimary2" class="font-mono text-base font-bold text-white">0.00 m</span>
-                    <span id="distSecondary2" class="font-mono text-[10px] text-slate-400">(0.000 km)</span>
+            <!-- Tarjeta Flotante de Medición Ultra-Compacta - MAPA 2 -->
+            <div id="measureCard2" class="hidden absolute bottom-8 left-2 z-[550] bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-lg px-2 py-1 shadow-xl pointer-events-auto flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                <span id="distPrimary2" class="font-mono text-xs font-bold text-white">0.0 m</span>
+                <span id="measureCount2" class="font-mono text-[9px] text-slate-400">(0)</span>
+                <div class="flex items-center gap-1 ml-0.5">
+                    <button id="btnUndoMeasure2" title="Deshacer punto" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] disabled:opacity-40" disabled>
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button id="btnClearMeasure2" title="Borrar medición" class="px-1.5 py-0.5 rounded bg-rose-600/25 hover:bg-rose-600 text-rose-300 hover:text-white text-[9px] transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
             </div>
         </section>
@@ -522,20 +532,6 @@
                     </svg>
                 </div>
             </div>
-        </div>
-
-        <!-- ==================== AVISO SUPERIOR DE MODO MEDICIÓN ==================== -->
-        <div id="measurementBanner" class="hidden absolute top-14 left-1/2 -translate-x-1/2 z-[890] bg-slate-900/95 backdrop-blur-xl border border-rose-500/50 rounded-full px-3.5 py-1.5 shadow-2xl flex items-center gap-3">
-            <span class="flex items-center gap-1.5 text-[11px] font-semibold text-rose-300">
-                <i class="fa-solid fa-ruler-combined text-rose-400"></i>
-                <span>Haz clic en cada mapa para medir distancias</span>
-            </span>
-            <button id="btnClearAllMeasures" class="px-2 py-0.5 rounded-full bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/40 text-[10px] font-semibold transition">
-                Limpiar
-            </button>
-            <button id="btnCloseMeasureDock" class="text-slate-400 hover:text-white text-xs px-1 transition">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
         </div>
 
         <!-- Notificación Toast -->
@@ -618,7 +614,6 @@
                     deferredInstallPrompt = null;
                 }
             } else {
-                // Alternar pantalla completa nativa y mostrar instrucción de instalación en Chrome
                 if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
                 }
@@ -626,7 +621,6 @@
             }
         });
 
-        // Si la app se abre ya instalada (standalone/fullscreen), activar pantalla completa al primer toque
         if (window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches) {
             document.addEventListener('pointerdown', () => {
                 if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -686,13 +680,15 @@
         const INITIAL_CENTER = [40.3280, -3.7645]; // Leganés / Madrid
         const INITIAL_ZOOM = 13.5;
 
+        const isMobileOrPortrait = () => window.innerHeight > window.innerWidth || window.innerWidth < 768;
+
         const state = {
             baseZoom: INITIAL_ZOOM,
             syncZoom: true,
             syncPan: false,
             syncBearing: false,
-            splitDirection: 'vertical',
-            cleanMode: { 1: false, 2: false },
+            splitDirection: isMobileOrPortrait() ? 'horizontal' : 'vertical',
+            cleanMode: { 1: true, 2: true }, // Ocultos por defecto
             isMeasuring: false,
             measurePoints1: [],
             measurePoints2: [],
@@ -710,6 +706,44 @@
             lastCenter2: { lat: INITIAL_CENTER[0], lng: INITIAL_CENTER[1] },
             lastSearchResults: { 1: [], 2: [] }
         };
+
+        /**************************************************************************
+         * CONSULTA DE ALTITUD SOBRE EL NIVEL DEL MAR (m s.n.m.) EN EL PUNTO CENTRAL
+         **************************************************************************/
+        const elevationCache = new Map();
+        const elevationTimers = { 1: null, 2: null };
+
+        function scheduleElevationFetch(mapNum, lat, lng) {
+            clearTimeout(elevationTimers[mapNum]);
+            elevationTimers[mapNum] = setTimeout(() => {
+                fetchCenterElevation(mapNum, lat, lng);
+            }, 320);
+        }
+
+        async function fetchCenterElevation(mapNum, lat, lng) {
+            const elBadge = document.getElementById(`elevMap${mapNum}`);
+            if (!elBadge) return;
+
+            const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+            if (elevationCache.has(cacheKey)) {
+                elBadge.textContent = `${elevationCache.get(cacheKey)} m`;
+                return;
+            }
+
+            try {
+                const url = `https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(5)}&longitude=${lng.toFixed(5)}`;
+                const res = await fetch(url);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && Array.isArray(data.elevation) && data.elevation.length > 0) {
+                    const meters = Math.round(data.elevation[0]);
+                    elevationCache.set(cacheKey, meters);
+                    elBadge.textContent = `${meters.toLocaleString('es-ES')} m`;
+                }
+            } catch (e) {
+                // Silenciar si no hay conexión temporal
+            }
+        }
 
         /**************************************************************************
          * FUNCIONES DE ESCALA REAL, PROYECCIÓN Y CREACIÓN DE MAPAS
@@ -810,6 +844,10 @@
         const measureLayerGroup1 = L.layerGroup().addTo(map1);
         const measureLayerGroup2 = L.layerGroup().addTo(map2);
 
+        // Consultar altitud inicial de ambos centros
+        fetchCenterElevation(1, INITIAL_CENTER[0], INITIAL_CENTER[1]);
+        fetchCenterElevation(2, INITIAL_CENTER[0], INITIAL_CENTER[1]);
+
         /**************************************************************************
          * MINI MAPAS DE SUPERPOSICIÓN (ARRASTRABLE Y REDIMENSIONABLE)
          **************************************************************************/
@@ -908,7 +946,6 @@
 
             if (state.overlayActive) {
                 win.classList.remove('hidden');
-                // Ajustar tamaño y posición inicial dentro de pantalla
                 const initW = Math.min(430, window.innerWidth - 20);
                 const initH = Math.min(265, window.innerHeight - 90);
                 win.style.width = `${initW}px`;
@@ -935,7 +972,6 @@
             }
         }
 
-        // Lógica de arrastre desde la barra de título de la ventana superpuesta
         (function setupOverlayWindowDragAndResize() {
             const win = document.getElementById('overlayMiniWindow');
             const dragHandle = document.getElementById('overlayDragHandle');
@@ -1316,6 +1352,8 @@
             applyGallPetersAspectTransform(2);
             updateCoordsDisplay();
             updateScaleBadges();
+            fetchCenterElevation(1, state.lastCenter1.lat, state.lastCenter1.lng);
+            fetchCenterElevation(2, state.lastCenter2.lat, state.lastCenter2.lng);
 
             setTimeout(() => {
                 state.isProgrammaticMove = false;
@@ -1496,7 +1534,7 @@
         document.querySelectorAll('.layer-btn-2').forEach(btn => btn.addEventListener('click', () => setMapLayer(2, btn.dataset.layer)));
 
         /**************************************************************************
-         * SINCRONIZACIÓN DE ZOOM Y PAN RELATIVO
+         * SINCRONIZACIÓN DE ZOOM, PAN RELATIVO Y ALTITUD CENTRAL
          **************************************************************************/
         function updateCoordsDisplay() {
             const c1 = map1.getCenter();
@@ -1508,6 +1546,11 @@
         function handleMapSync(sourceMap, targetMap, sourceId) {
             updateCoordsDisplay();
             updateScaleBadges();
+
+            const c1Now = map1.getCenter();
+            const c2Now = map2.getCenter();
+            scheduleElevationFetch(1, c1Now.lat, c1Now.lng);
+            scheduleElevationFetch(2, c2Now.lat, c2Now.lng);
 
             if (!state.isProgrammaticMove) {
                 state.isProgrammaticMove = true;
@@ -1566,13 +1609,13 @@
         map2.on('zoom move', () => handleMapSync(map2, map1, 'map2'));
 
         /**************************************************************************
-         * MEDIDOR DE DISTANCIA INDEPENDIENTE POR MAPA
+         * MEDIDOR DE DISTANCIA ULTRA-COMPACTO E INDEPENDIENTE POR MAPA
          **************************************************************************/
-        function formatDistance(meters) {
+        function formatDistanceCompact(meters) {
             if (meters >= 1000) {
-                return { primary: `${(meters / 1000).toFixed(2)} km`, secondary: `(${Math.round(meters).toLocaleString('es-ES')} m)` };
+                return `${(meters / 1000).toFixed(2)} km`;
             }
-            return { primary: `${meters.toFixed(1)} m`, secondary: `(${(meters / 1000).toFixed(3)} km)` };
+            return `${meters.toFixed(1)} m`;
         }
 
         function createMarkerIcon(index, isLast, mapNum) {
@@ -1580,8 +1623,8 @@
             const bgColor = index === 0 ? accent : (isLast ? 'bg-rose-500 measure-dot-pulse' : 'bg-rose-500');
             return L.divIcon({
                 className: 'custom-measure-point',
-                html: `<div class="relative w-6 h-6 -ml-1.5 -mt-1.5 rounded-full ${bgColor} border-2 border-white shadow-lg flex items-center justify-center text-[10px] font-mono font-bold text-white">${index + 1}</div>`,
-                iconSize: [12, 12]
+                html: `<div class="relative w-5 h-5 -ml-1 -mt-1 rounded-full ${bgColor} border-2 border-white shadow-lg flex items-center justify-center text-[9px] font-mono font-bold text-white">${index + 1}</div>`,
+                iconSize: [10, 10]
             });
         }
 
@@ -1597,8 +1640,8 @@
             const latLngs = pts.map(p => [p.lat, p.lng]);
 
             if (pts.length > 1) {
-                L.polyline(latLngs, { color: '#0f172a', weight: 6, opacity: 0.75 }).addTo(targetLayerGroup);
-                L.polyline(latLngs, { color: lineColor, weight: 3.5, dashArray: '8, 6', opacity: 1 }).addTo(targetLayerGroup);
+                L.polyline(latLngs, { color: '#0f172a', weight: 5, opacity: 0.75 }).addTo(targetLayerGroup);
+                L.polyline(latLngs, { color: lineColor, weight: 3, dashArray: '7, 5', opacity: 1 }).addTo(targetLayerGroup);
 
                 for (let i = 1; i < pts.length; i++) {
                     const p1 = L.latLng(pts[i - 1].lat, pts[i - 1].lng);
@@ -1632,10 +1675,9 @@
                     totalMeters += refMap.distance([pts[i - 1].lat, pts[i - 1].lng], [pts[i].lat, pts[i].lng]);
                 }
 
-                const formatted = formatDistance(totalMeters);
-                document.getElementById(`distPrimary${mapNum}`).textContent = formatted.primary;
-                document.getElementById(`distSecondary${mapNum}`).textContent = formatted.secondary;
-                document.getElementById(`measureCount${mapNum}`).textContent = `(${pts.length} ${pts.length === 1 ? 'pt' : 'pts'})`;
+                const compactDist = formatDistanceCompact(totalMeters);
+                document.getElementById(`distPrimary${mapNum}`).textContent = compactDist;
+                document.getElementById(`measureCount${mapNum}`).textContent = `(${pts.length})`;
                 document.getElementById(`btnUndoMeasure${mapNum}`).disabled = pts.length === 0;
 
                 const card = document.getElementById(`measureCard${mapNum}`);
@@ -1643,7 +1685,7 @@
                 if (state.isMeasuring || pts.length > 0) card.classList.remove('hidden');
                 else card.classList.add('hidden');
 
-                localBadge.textContent = pts.length > 0 ? formatted.primary : 'Medir';
+                localBadge.textContent = pts.length > 0 ? compactDist : 'Medir';
             });
         }
 
@@ -1656,25 +1698,20 @@
         function clearMapMeasurement(mapNum) {
             if (mapNum === 1) state.measurePoints1 = [];
             else state.measurePoints2 = [];
-            updateMeasurementUI();
-        }
-
-        function clearAllMeasurements() {
-            state.measurePoints1 = [];
-            state.measurePoints2 = [];
-            updateMeasurementUI();
+            if (state.measurePoints1.length === 0 && state.measurePoints2.length === 0) {
+                toggleMeasureMode(false);
+            } else {
+                updateMeasurementUI();
+            }
         }
 
         function toggleMeasureMode(forceState) {
             state.isMeasuring = typeof forceState === 'boolean' ? forceState : !state.isMeasuring;
-            const banner = document.getElementById('measurementBanner');
             const container = document.getElementById('mapsGridContainer');
 
             if (state.isMeasuring) {
-                banner.classList.remove('hidden');
                 container.classList.add('measuring-cursor');
             } else {
-                banner.classList.add('hidden');
                 container.classList.remove('measuring-cursor');
             }
             updateMeasurementUI();
@@ -1788,6 +1825,7 @@
             state.lastCenter2 = { lat: c1.lat, lng: c1.lng };
             updateCoordsDisplay();
             updateScaleBadges();
+            fetchCenterElevation(2, c1.lat, c1.lng);
             setTimeout(() => { state.isProgrammaticMove = false; syncOverlayMaps(); }, 250);
             showToast('Vistas igualadas');
         });
@@ -1797,7 +1835,6 @@
             const panel = document.getElementById(`panelMap${mapNum}`);
             const topOverlay = document.getElementById(`uiTopOverlay${mapNum}`);
             const compassOverlay = document.getElementById(`uiCompassOverlay${mapNum}`);
-            const coordsOverlay = document.getElementById(`uiCoordsOverlay${mapNum}`);
             const iconBtn = document.getElementById(`iconCleanMap${mapNum}`);
             const btnClean = document.getElementById(`btnCleanMap${mapNum}`);
 
@@ -1805,17 +1842,14 @@
                 panel.classList.add('map-ui-hidden');
                 topOverlay.classList.add('hidden');
                 compassOverlay.classList.add('hidden');
-                coordsOverlay.classList.add('sm:hidden', 'hidden');
                 iconBtn.className = 'fa-solid fa-eye text-xs text-amber-400';
-                btnClean.classList.add('opacity-60', 'hover:opacity-100');
+                btnClean.classList.add('opacity-70', 'hover:opacity-100');
             } else {
                 panel.classList.remove('map-ui-hidden');
                 topOverlay.classList.remove('hidden');
                 compassOverlay.classList.remove('hidden');
-                coordsOverlay.classList.remove('sm:hidden', 'hidden');
-                coordsOverlay.classList.add('hidden', 'sm:flex');
                 iconBtn.className = `fa-solid fa-eye-slash text-xs ${mapNum === 1 ? 'text-blue-400' : 'text-emerald-400'}`;
-                btnClean.classList.remove('opacity-60', 'hover:opacity-100');
+                btnClean.classList.remove('opacity-70', 'hover:opacity-100');
             }
         }
 
@@ -1845,18 +1879,26 @@
             setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 180);
         }
 
+        // Aplicar distribución inicial automática (horizontal en móvil/vertical, vertical en PC)
+        applySplitDirection(state.splitDirection);
+        setMapCleanMode(1, true);
+        setMapCleanMode(2, true);
+
         document.getElementById('btnToggleSplitLayout').addEventListener('click', () => {
             applySplitDirection(state.splitDirection === 'vertical' ? 'horizontal' : 'vertical');
         });
-
-        document.getElementById('btnCloseMeasureDock').addEventListener('click', () => toggleMeasureMode(false));
-        document.getElementById('btnClearAllMeasures').addEventListener('click', () => clearAllMeasurements());
 
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && state.isMeasuring) toggleMeasureMode(false);
         });
 
+        let lastOrientationPortrait = isMobileOrPortrait();
         window.addEventListener('resize', () => {
+            const currentPortrait = isMobileOrPortrait();
+            if (currentPortrait !== lastOrientationPortrait) {
+                lastOrientationPortrait = currentPortrait;
+                applySplitDirection(currentPortrait ? 'horizontal' : 'vertical');
+            }
             map1.invalidateSize();
             map2.invalidateSize();
             if (state.overlayActive) {
