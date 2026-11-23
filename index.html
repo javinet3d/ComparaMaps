@@ -45,12 +45,15 @@
     </script>
 
     <style>
-        body, html {
+        html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
             height: 100%;
+            height: 100dvh;
             overflow: hidden;
             background-color: #0f172a;
+            overscroll-behavior: none;
         }
 
         .leaflet-container {
@@ -82,6 +85,22 @@
         .leaflet-control-zoom a:hover {
             background-color: rgba(59, 130, 246, 0.9) !important;
             color: #ffffff !important;
+        }
+
+        /* Ajustar atribución de Leaflet para que no solape la barra de estado inferior */
+        .leaflet-bottom.leaflet-right {
+            margin-bottom: 24px !important;
+            z-index: 480 !important;
+        }
+
+        .leaflet-control-attribution {
+            background: rgba(15, 23, 42, 0.7) !important;
+            color: #94a3b8 !important;
+            font-size: 9px !important;
+            padding: 0 4px !important;
+        }
+        .leaflet-control-attribution a {
+            color: #38bdf8 !important;
         }
 
         .segment-tooltip {
@@ -179,7 +198,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen flex flex-col font-sans select-none">
+<body class="bg-slate-950 text-slate-100 w-full h-[100dvh] flex flex-col font-sans select-none overflow-hidden">
 
     <!-- BARRA SUPERIOR COMPACTA EN UNA SOLA LÍNEA: TÍTULO A LA IZQUIERDA Y SOLO ICONOS CON TOOLTIP A LA DERECHA -->
     <header class="h-12 px-2.5 sm:px-4 bg-slate-900/95 backdrop-blur-xl border-b border-slate-800 flex items-center justify-between gap-2 shrink-0 z-[1000] shadow-lg">
@@ -194,298 +213,300 @@
 
         <!-- Botones solo con iconos alineados a la derecha con Tooltip (hover y pulsación larga) -->
         <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            <!-- Toggle Zoom Sincronizado -->
             <button id="btnSyncZoom" data-tooltip="Zoom sincronizado: iguala el nivel de escala entre ambos mapas" class="has-tooltip relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all border bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm">
                 <i class="fa-solid fa-magnifying-glass-plus text-xs sm:text-sm text-blue-400"></i>
                 <span id="dotSyncZoom" class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]"></span>
             </button>
 
-            <!-- Toggle Posición / Movimiento Relativo Sincronizado -->
             <button id="btnSyncPan" data-tooltip="Posición sincronizada: mueve ambos mapas manteniendo su separación" class="has-tooltip relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750">
                 <i class="fa-solid fa-arrows-up-down-left-right text-xs sm:text-sm text-slate-400"></i>
                 <span id="dotSyncPan" class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-600"></span>
             </button>
 
-            <!-- Toggle Giro / Norte Sincronizado -->
             <button id="btnSyncBearing" data-tooltip="Giro sincronizado: rota el Norte de ambos mapas a la vez" class="has-tooltip relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all border bg-slate-800/90 border-slate-700 text-slate-300 hover:bg-slate-750">
                 <i class="fa-regular fa-compass text-xs sm:text-sm text-amber-400"></i>
                 <span id="dotSyncBearing" class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-600"></span>
             </button>
 
-            <!-- Igualar vistas inmediatamente -->
             <button id="btnAlignNow" data-tooltip="Igualar vistas: lleva el Mapa 2 al mismo lugar y escala del Mapa 1" class="has-tooltip w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center justify-center transition">
                 <i class="fa-solid fa-clone text-xs sm:text-sm text-cyan-400"></i>
             </button>
 
-            <!-- Alternar División Vertical / Horizontal -->
             <button id="btnToggleSplitLayout" data-tooltip="División de pantalla: alternar entre Lado a Lado o Arriba y Abajo" class="has-tooltip w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center transition">
                 <i id="iconSplitLayout" class="fa-solid fa-table-columns text-xs sm:text-sm text-cyan-400"></i>
             </button>
 
-            <!-- Mini Ventana Superpuesta con Transparencia -->
             <button id="btnToggleOverlayWindow" data-tooltip="Superponer mapas: ventana flotante con transparencia ajustable" class="has-tooltip relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-all border bg-slate-800/90 border-slate-700 text-cyan-300 hover:border-cyan-500/50">
                 <i class="fa-solid fa-layer-group text-xs sm:text-sm text-[#00E5FF]"></i>
                 <span id="dotOverlayActive" class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-slate-600"></span>
             </button>
 
-            <!-- Botón Instalar App PWA en Chrome / Pantalla Completa -->
             <button id="btnInstallPWA" data-tooltip="Instalar Comparamapas en Chrome como aplicación a pantalla completa" class="has-tooltip w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/30 text-[#00E5FF] border border-cyan-500/40 flex items-center justify-center transition">
                 <i class="fa-solid fa-download text-xs sm:text-sm"></i>
             </button>
         </div>
     </header>
 
-    <!-- TOOLTIP FLOTANTE GLOBAL (HOVER Y PULSACIÓN LARGA TÁCTIL) -->
+    <!-- TOOLTIP FLOTANTE GLOBAL -->
     <div id="customTooltip" class="pointer-events-none opacity-0 transition-opacity duration-150 fixed z-[2000] px-2.5 py-1.5 rounded-lg bg-slate-950/95 border border-cyan-500/40 text-slate-100 text-[11px] font-medium shadow-2xl max-w-[230px] text-center leading-snug"></div>
 
     <!-- CONTENEDOR PRINCIPAL DE LOS DOS MAPAS -->
-    <main id="mapsGridContainer" class="flex-1 flex flex-row relative overflow-hidden bg-slate-950">
+    <main id="mapsGridContainer" class="flex-1 min-h-0 min-w-0 w-full flex flex-row relative overflow-hidden bg-slate-950">
         
         <!-- ==================== PANEL MAPA 1 ==================== -->
-        <section id="panelMap1" class="relative flex-1 w-full h-full border-r border-slate-800 transition-all duration-300 overflow-hidden bg-slate-950 map-ui-hidden">
-            <div id="map1" class="w-full h-full z-10"></div>
+        <section id="panelMap1" class="relative flex-1 basis-0 min-h-0 min-w-0 flex flex-col border-r border-slate-800 overflow-hidden bg-slate-950 map-ui-hidden">
+            <div class="relative flex-1 min-h-0 min-w-0 w-full overflow-hidden">
+                <div id="map1" class="absolute inset-0 w-full h-full z-10"></div>
 
-            <!-- Cruz Central Fija (Retícula de Precisión) -->
-            <div class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center">
-                <div class="relative w-5 h-5 flex items-center justify-center">
-                    <div class="absolute w-full h-[1.5px] bg-blue-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
-                    <div class="absolute h-full w-[1.5px] bg-blue-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
-                    <div class="w-1.5 h-1.5 rounded-full border border-white/90 bg-blue-500/40"></div>
-                </div>
-            </div>
-
-            <!-- Botón Ocultar/Mostrar Controles (Modo Limpio - Oculto por defecto) -->
-            <button id="btnCleanMap1" data-tooltip="Ocultar o mostrar controles del Mapa 1" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto opacity-70 hover:opacity-100">
-                <i id="iconCleanMap1" class="fa-solid fa-eye text-xs text-amber-400"></i>
-            </button>
-
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Escala + Capas + Buscador Mapa 1 (Oculta por defecto) -->
-            <div id="uiTopOverlay1" class="hidden absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
-                <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
-                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <span class="w-2 h-2 rounded-full bg-blue-400"></span>
-                        <span class="text-[11px] font-bold text-blue-200 tracking-wide">MAPA 1</span>
+                <!-- Cruz Central Fija -->
+                <div class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center">
+                    <div class="relative w-5 h-5 flex items-center justify-center">
+                        <div class="absolute w-full h-[1.5px] bg-blue-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                        <div class="absolute h-full w-[1.5px] bg-blue-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                        <div class="w-1.5 h-1.5 rounded-full border border-white/90 bg-blue-500/40"></div>
                     </div>
-
-                    <select id="projSelect1" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-[11px] rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer">
-                        <option value="mercator" selected>Mercator (Estándar)</option>
-                        <option value="true_size">Tamaño Real (Escala cos lat)</option>
-                        <option value="gall_peters">Gall-Peters (Área Equivalente)</option>
-                    </select>
-
-                    <div class="flex flex-wrap items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="1">
-                        <button data-layer="streets" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition bg-blue-600 text-white shadow">Calles</button>
-                        <button data-layer="satellite" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Satélite</button>
-                        <button data-layer="hybrid" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Híbrido</button>
-                        <button data-layer="terrain" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Terreno</button>
-                    </div>
-
-                    <button id="btnLocalMeasure1" class="px-2 py-0.5 rounded-lg bg-slate-950/90 hover:bg-rose-600/30 border border-slate-700 text-slate-300 hover:text-rose-200 text-[11px] font-medium transition flex items-center gap-1">
-                        <i class="fa-solid fa-ruler text-rose-400 text-[10px]"></i>
-                        <span id="localMeasureBadge1" class="font-mono text-[10px]">Medir</span>
-                    </button>
                 </div>
 
-                <!-- Buscador Independiente Mapa 1 -->
-                <div class="relative w-full max-w-sm pointer-events-auto">
-                    <form id="searchForm1" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-blue-500 rounded-xl shadow-xl overflow-hidden transition">
-                        <span class="pl-2.5 pr-1.5 text-blue-400 text-xs">
-                            <i id="searchIcon1" class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-                        <input id="searchInput1" type="text" autocomplete="off" placeholder="Buscar lugar, país o coords en Mapa 1..." class="w-full bg-transparent py-1.5 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none" />
-                        <button type="button" id="btnClearSearch1" class="hidden px-2 py-1 text-slate-400 hover:text-rose-400 text-xs transition">
+                <!-- Botón Ocultar/Mostrar Controles (Oculto por defecto) -->
+                <button id="btnCleanMap1" data-tooltip="Ocultar o mostrar controles del Mapa 1" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto opacity-75 hover:opacity-100">
+                    <i id="iconCleanMap1" class="fa-solid fa-eye text-xs text-amber-400"></i>
+                </button>
+
+                <!-- Tarjeta Flotante Superior Mapa 1 -->
+                <div id="uiTopOverlay1" class="hidden absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
+                    <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
+                        <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                            <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                            <span class="text-[11px] font-bold text-blue-200 tracking-wide">MAPA 1</span>
+                        </div>
+
+                        <select id="projSelect1" class="bg-slate-950/90 border border-slate-700 text-slate-200 text-[11px] rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer">
+                            <option value="mercator" selected>Mercator (Estándar)</option>
+                            <option value="true_size">Tamaño Real (Escala cos lat)</option>
+                            <option value="gall_peters">Gall-Peters (Área Equivalente)</option>
+                        </select>
+
+                        <div class="flex flex-wrap items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="1">
+                            <button data-layer="streets" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition bg-blue-600 text-white shadow">Calles</button>
+                            <button data-layer="satellite" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Satélite</button>
+                            <button data-layer="hybrid" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Híbrido</button>
+                            <button data-layer="terrain" class="layer-btn-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Terreno</button>
+                        </div>
+
+                        <button id="btnLocalMeasure1" class="px-2 py-0.5 rounded-lg bg-slate-950/90 hover:bg-rose-600/30 border border-slate-700 text-slate-300 hover:text-rose-200 text-[11px] font-medium transition flex items-center gap-1">
+                            <i class="fa-solid fa-ruler text-rose-400 text-[10px]"></i>
+                            <span id="localMeasureBadge1" class="font-mono text-[10px]">Medir</span>
+                        </button>
+                    </div>
+
+                    <!-- Buscador Independiente Mapa 1 -->
+                    <div class="relative w-full max-w-sm pointer-events-auto">
+                        <form id="searchForm1" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-blue-500 rounded-xl shadow-xl overflow-hidden transition">
+                            <span class="pl-2.5 pr-1.5 text-blue-400 text-xs">
+                                <i id="searchIcon1" class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input id="searchInput1" type="text" autocomplete="off" placeholder="Buscar lugar, país o coords en Mapa 1..." class="w-full bg-transparent py-1.5 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none" />
+                            <button type="button" id="btnClearSearch1" class="hidden px-2 py-1 text-slate-400 hover:text-rose-400 text-xs transition">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                            <button type="submit" class="px-2.5 py-1.5 bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-semibold transition border-l border-slate-700/80">Ir</button>
+                        </form>
+                        <div id="searchResults1" class="hidden absolute left-0 right-0 mt-1 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
+                    </div>
+                </div>
+
+                <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 1) -->
+                <div id="uiCompassOverlay1" class="hidden absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
+                    <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
+                        <button id="btnResetNorth1" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
+                            <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
+                            <div id="compassNeedle1" class="w-5 h-5 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
+                                <svg viewBox="0 0 24 24" class="w-4 h-4">
+                                    <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
+                                    <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <span id="bearingValue1" class="font-mono text-[10px] font-bold text-blue-300">0° N</span>
+                        <button id="btnToggleRotPanel1" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 w-full text-center transition">
+                            <i class="fa-solid fa-rotate"></i> Girar
+                        </button>
+                    </div>
+
+                    <div id="rotPanel1" class="hidden bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-2.5 shadow-2xl w-48 flex flex-col gap-2">
+                        <div class="flex items-center justify-between text-[11px] text-slate-300 font-medium">
+                            <span>Orientación Norte</span>
+                            <button data-map="1" data-angle="0" class="quick-rot-btn text-[10px] text-blue-400 hover:underline font-mono">Reset 0°</button>
+                        </div>
+                        <input id="bearingSlider1" type="range" min="0" max="359" value="0" class="bearing-slider w-full" />
+                        <div class="grid grid-cols-4 gap-1">
+                            <button data-map="1" data-delta="-45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-45°</button>
+                            <button data-map="1" data-delta="-15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-15°</button>
+                            <button data-map="1" data-delta="15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+15°</button>
+                            <button data-map="1" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Flotante de Medición Ultra-Compacta - MAPA 1 -->
+                <div id="measureCard1" class="hidden absolute bottom-2 left-2 z-[550] bg-slate-900/95 backdrop-blur-xl border border-blue-500/40 rounded-lg px-2 py-1 shadow-xl pointer-events-auto flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                    <span id="distPrimary1" class="font-mono text-xs font-bold text-white">0.0 m</span>
+                    <span id="measureCount1" class="font-mono text-[9px] text-slate-400">(0)</span>
+                    <div class="flex items-center gap-1 ml-0.5">
+                        <button id="btnUndoMeasure1" title="Deshacer punto" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] disabled:opacity-40" disabled>
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button id="btnClearMeasure1" title="Borrar medición" class="px-1.5 py-0.5 rounded bg-rose-600/25 hover:bg-rose-600 text-rose-300 hover:text-white text-[9px] transition">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                        <button type="submit" class="px-2.5 py-1.5 bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-semibold transition border-l border-slate-700/80">Ir</button>
-                    </form>
-                    <div id="searchResults1" class="hidden absolute left-0 right-0 mt-1 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
-                </div>
-            </div>
-
-            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 1 - Oculto por defecto) -->
-            <div id="uiCompassOverlay1" class="hidden absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
-                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
-                    <button id="btnResetNorth1" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
-                        <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
-                        <div id="compassNeedle1" class="w-5 h-5 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
-                            <svg viewBox="0 0 24 24" class="w-4 h-4">
-                                <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
-                                <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
-                            </svg>
-                        </div>
-                    </button>
-                    <span id="bearingValue1" class="font-mono text-[10px] font-bold text-blue-300">0° N</span>
-                    <button id="btnToggleRotPanel1" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 w-full text-center transition">
-                        <i class="fa-solid fa-rotate"></i> Girar
-                    </button>
-                </div>
-
-                <div id="rotPanel1" class="hidden bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-2.5 shadow-2xl w-48 flex flex-col gap-2">
-                    <div class="flex items-center justify-between text-[11px] text-slate-300 font-medium">
-                        <span>Orientación Norte</span>
-                        <button data-map="1" data-angle="0" class="quick-rot-btn text-[10px] text-blue-400 hover:underline font-mono">Reset 0°</button>
-                    </div>
-                    <input id="bearingSlider1" type="range" min="0" max="359" value="0" class="bearing-slider w-full" />
-                    <div class="grid grid-cols-4 gap-1">
-                        <button data-map="1" data-delta="-45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-45°</button>
-                        <button data-map="1" data-delta="-15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-15°</button>
-                        <button data-map="1" data-delta="15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+15°</button>
-                        <button data-map="1" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Barra inferior compacta: Altitud s.n.m. + Coordenadas del Mapa 1 (Siempre visible en la base) -->
-            <div id="uiCoordsOverlay1" class="absolute bottom-2 left-2 z-[500] pointer-events-none flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md px-2 py-0.5 rounded-md border border-slate-800/90 text-[10px] font-mono text-slate-300 shadow">
-                <span class="text-blue-400 font-semibold flex items-center gap-1" title="Altitud del punto central sobre el nivel del mar">
-                    <i class="fa-solid fa-mountain text-[9px]"></i>
-                    <span id="elevMap1">-- m</span>
-                </span>
-                <span class="text-slate-600">|</span>
-                <span id="coordsMap1" class="text-slate-400">40.3280, -3.7645</span>
-                <span id="scaleBadgeMap1" class="hidden md:inline px-1 rounded bg-blue-500/15 text-blue-300 text-[9px]">Mercator ×1.31</span>
-            </div>
-
-            <!-- Tarjeta Flotante de Medición Ultra-Compacta - MAPA 1 -->
-            <div id="measureCard1" class="hidden absolute bottom-8 left-2 z-[550] bg-slate-900/95 backdrop-blur-xl border border-blue-500/40 rounded-lg px-2 py-1 shadow-xl pointer-events-auto flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
-                <span id="distPrimary1" class="font-mono text-xs font-bold text-white">0.0 m</span>
-                <span id="measureCount1" class="font-mono text-[9px] text-slate-400">(0)</span>
-                <div class="flex items-center gap-1 ml-0.5">
-                    <button id="btnUndoMeasure1" title="Deshacer punto" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] disabled:opacity-40" disabled>
-                        <i class="fa-solid fa-rotate-left"></i>
-                    </button>
-                    <button id="btnClearMeasure1" title="Borrar medición" class="px-1.5 py-0.5 rounded bg-rose-600/25 hover:bg-rose-600 text-rose-300 hover:text-white text-[9px] transition">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+            <!-- Barra de estado inferior fija del Mapa 1 -->
+            <div id="uiCoordsOverlay1" class="h-6 px-2.5 bg-slate-950 border-t border-slate-800/90 flex items-center justify-between gap-2 shrink-0 z-[500] text-[10px] font-mono text-slate-300">
+                <div class="flex items-center gap-1.5 min-w-0 truncate">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                    <span class="text-blue-400 font-semibold flex items-center gap-1 shrink-0" title="Altitud del punto central sobre el nivel del mar">
+                        <i class="fa-solid fa-mountain text-[9px]"></i>
+                        <span id="elevMap1">-- m</span>
+                    </span>
+                    <span class="text-slate-700">|</span>
+                    <span id="coordsMap1" class="text-slate-400 truncate">40.3280, -3.7645</span>
                 </div>
+                <span id="scaleBadgeMap1" class="px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-300 text-[9px] shrink-0">Mercator ×1.31</span>
             </div>
         </section>
 
         <!-- ==================== PANEL MAPA 2 ==================== -->
-        <section id="panelMap2" class="relative flex-1 w-full h-full transition-all duration-300 overflow-hidden bg-slate-950 map-ui-hidden">
-            <div id="map2" class="w-full h-full z-10"></div>
+        <section id="panelMap2" class="relative flex-1 basis-0 min-h-0 min-w-0 flex flex-col overflow-hidden bg-slate-950 map-ui-hidden">
+            <div class="relative flex-1 min-h-0 min-w-0 w-full overflow-hidden">
+                <div id="map2" class="absolute inset-0 w-full h-full z-10"></div>
 
-            <!-- Cruz Central Fija (Retícula de Precisión) -->
-            <div class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center">
-                <div class="relative w-5 h-5 flex items-center justify-center">
-                    <div class="absolute w-full h-[1.5px] bg-emerald-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
-                    <div class="absolute h-full w-[1.5px] bg-emerald-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
-                    <div class="w-1.5 h-1.5 rounded-full border border-white/90 bg-emerald-500/40"></div>
-                </div>
-            </div>
-
-            <!-- Botón Ocultar/Mostrar Controles (Modo Limpio - Oculto por defecto) -->
-            <button id="btnCleanMap2" data-tooltip="Ocultar o mostrar controles del Mapa 2" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto opacity-70 hover:opacity-100">
-                <i id="iconCleanMap2" class="fa-solid fa-eye text-xs text-amber-400"></i>
-            </button>
-
-            <!-- Tarjeta Flotante Superior: Identificador + Selector de Escala + Capas + Buscador Mapa 2 (Oculta por defecto) -->
-            <div id="uiTopOverlay2" class="hidden absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
-                <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
-                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        <span class="text-[11px] font-bold text-emerald-200 tracking-wide">MAPA 2</span>
+                <!-- Cruz Central Fija -->
+                <div class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center">
+                    <div class="relative w-5 h-5 flex items-center justify-center">
+                        <div class="absolute w-full h-[1.5px] bg-emerald-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                        <div class="absolute h-full w-[1.5px] bg-emerald-400/90 shadow-[0_0_4px_rgba(0,0,0,0.9)]"></div>
+                        <div class="w-1.5 h-1.5 rounded-full border border-white/90 bg-emerald-500/40"></div>
                     </div>
-
-                    <select id="projSelect2" class="bg-slate-950/90 border border-slate-700 text-emerald-300 text-[11px] rounded-lg px-2 py-1 font-semibold focus:outline-none focus:border-emerald-500 transition cursor-pointer">
-                        <option value="mercator">Mercator (Estándar)</option>
-                        <option value="true_size" selected>Tamaño Real (Escala cos lat)</option>
-                        <option value="gall_peters">Gall-Peters (Área Equivalente)</option>
-                    </select>
-
-                    <div class="flex flex-wrap items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="2">
-                        <button data-layer="streets" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Calles</button>
-                        <button data-layer="satellite" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Satélite</button>
-                        <button data-layer="hybrid" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition bg-emerald-600 text-white shadow">Híbrido</button>
-                        <button data-layer="terrain" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Terreno</button>
-                    </div>
-
-                    <button id="btnLocalMeasure2" class="px-2 py-0.5 rounded-lg bg-slate-950/90 hover:bg-rose-600/30 border border-slate-700 text-slate-300 hover:text-rose-200 text-[11px] font-medium transition flex items-center gap-1">
-                        <i class="fa-solid fa-ruler text-rose-400 text-[10px]"></i>
-                        <span id="localMeasureBadge2" class="font-mono text-[10px]">Medir</span>
-                    </button>
                 </div>
 
-                <!-- Buscador Independiente Mapa 2 -->
-                <div class="relative w-full max-w-sm pointer-events-auto">
-                    <form id="searchForm2" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-emerald-500 rounded-xl shadow-xl overflow-hidden transition">
-                        <span class="pl-2.5 pr-1.5 text-emerald-400 text-xs">
-                            <i id="searchIcon2" class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-                        <input id="searchInput2" type="text" autocomplete="off" placeholder="Buscar lugar, país o coords en Mapa 2..." class="w-full bg-transparent py-1.5 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none" />
-                        <button type="button" id="btnClearSearch2" class="hidden px-2 py-1 text-slate-400 hover:text-rose-400 text-xs transition">
+                <!-- Botón Ocultar/Mostrar Controles (Oculto por defecto) -->
+                <button id="btnCleanMap2" data-tooltip="Ocultar o mostrar controles del Mapa 2" class="has-tooltip absolute top-2.5 left-2.5 z-[650] w-8 h-8 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-700/80 text-slate-200 hover:text-white shadow-xl flex items-center justify-center transition pointer-events-auto opacity-75 hover:opacity-100">
+                    <i id="iconCleanMap2" class="fa-solid fa-eye text-xs text-amber-400"></i>
+                </button>
+
+                <!-- Tarjeta Flotante Superior Mapa 2 -->
+                <div id="uiTopOverlay2" class="hidden absolute top-2.5 left-12 right-12 z-[500] flex flex-col gap-1.5 max-w-xl pointer-events-none transition-opacity duration-200">
+                    <div class="flex flex-wrap items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-xl shadow-xl pointer-events-auto w-fit max-w-full">
+                        <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span class="text-[11px] font-bold text-emerald-200 tracking-wide">MAPA 2</span>
+                        </div>
+
+                        <select id="projSelect2" class="bg-slate-950/90 border border-slate-700 text-emerald-300 text-[11px] rounded-lg px-2 py-1 font-semibold focus:outline-none focus:border-emerald-500 transition cursor-pointer">
+                            <option value="mercator">Mercator (Estándar)</option>
+                            <option value="true_size" selected>Tamaño Real (Escala cos lat)</option>
+                            <option value="gall_peters">Gall-Peters (Área Equivalente)</option>
+                        </select>
+
+                        <div class="flex flex-wrap items-center bg-slate-950/80 p-0.5 rounded-lg border border-slate-800" data-map-target="2">
+                            <button data-layer="streets" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Calles</button>
+                            <button data-layer="satellite" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Satélite</button>
+                            <button data-layer="hybrid" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition bg-emerald-600 text-white shadow">Híbrido</button>
+                            <button data-layer="terrain" class="layer-btn-2 px-2 py-0.5 rounded-md text-[11px] font-medium transition text-slate-400 hover:text-white">Terreno</button>
+                        </div>
+
+                        <button id="btnLocalMeasure2" class="px-2 py-0.5 rounded-lg bg-slate-950/90 hover:bg-rose-600/30 border border-slate-700 text-slate-300 hover:text-rose-200 text-[11px] font-medium transition flex items-center gap-1">
+                            <i class="fa-solid fa-ruler text-rose-400 text-[10px]"></i>
+                            <span id="localMeasureBadge2" class="font-mono text-[10px]">Medir</span>
+                        </button>
+                    </div>
+
+                    <!-- Buscador Independiente Mapa 2 -->
+                    <div class="relative w-full max-w-sm pointer-events-auto">
+                        <form id="searchForm2" class="flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 focus-within:border-emerald-500 rounded-xl shadow-xl overflow-hidden transition">
+                            <span class="pl-2.5 pr-1.5 text-emerald-400 text-xs">
+                                <i id="searchIcon2" class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input id="searchInput2" type="text" autocomplete="off" placeholder="Buscar lugar, país o coords en Mapa 2..." class="w-full bg-transparent py-1.5 pr-2 text-xs text-slate-100 placeholder-slate-400 focus:outline-none" />
+                            <button type="button" id="btnClearSearch2" class="hidden px-2 py-1 text-slate-400 hover:text-rose-400 text-xs transition">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                            <button type="submit" class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold transition border-l border-slate-700/80">Ir</button>
+                        </form>
+                        <div id="searchResults2" class="hidden absolute left-0 right-0 mt-1 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
+                    </div>
+                </div>
+
+                <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 2) -->
+                <div id="uiCompassOverlay2" class="hidden absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
+                    <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
+                        <button id="btnResetNorth2" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
+                            <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
+                            <div id="compassNeedle2" class="w-5 h-5 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
+                                <svg viewBox="0 0 24 24" class="w-4 h-4">
+                                    <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
+                                    <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <span id="bearingValue2" class="font-mono text-[10px] font-bold text-emerald-300">0° N</span>
+                        <button id="btnToggleRotPanel2" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 w-full text-center transition">
+                            <i class="fa-solid fa-rotate"></i> Girar
+                        </button>
+                    </div>
+
+                    <div id="rotPanel2" class="hidden bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-2.5 shadow-2xl w-48 flex flex-col gap-2">
+                        <div class="flex items-center justify-between text-[11px] text-slate-300 font-medium">
+                            <span>Orientación Norte</span>
+                            <button data-map="2" data-angle="0" class="quick-rot-btn text-[10px] text-emerald-400 hover:underline font-mono">Reset 0°</button>
+                        </div>
+                        <input id="bearingSlider2" type="range" min="0" max="359" value="0" class="bearing-slider w-full" />
+                        <div class="grid grid-cols-4 gap-1">
+                            <button data-map="2" data-delta="-45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-45°</button>
+                            <button data-map="2" data-delta="-15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-15°</button>
+                            <button data-map="2" data-delta="15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+15°</button>
+                            <button data-map="2" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Flotante de Medición Ultra-Compacta - MAPA 2 -->
+                <div id="measureCard2" class="hidden absolute bottom-2 left-2 z-[550] bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-lg px-2 py-1 shadow-xl pointer-events-auto flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                    <span id="distPrimary2" class="font-mono text-xs font-bold text-white">0.0 m</span>
+                    <span id="measureCount2" class="font-mono text-[9px] text-slate-400">(0)</span>
+                    <div class="flex items-center gap-1 ml-0.5">
+                        <button id="btnUndoMeasure2" title="Deshacer punto" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] disabled:opacity-40" disabled>
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button id="btnClearMeasure2" title="Borrar medición" class="px-1.5 py-0.5 rounded bg-rose-600/25 hover:bg-rose-600 text-rose-300 hover:text-white text-[9px] transition">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-600/80 hover:bg-emerald-500 text-white text-xs font-semibold transition border-l border-slate-700/80">Ir</button>
-                    </form>
-                    <div id="searchResults2" class="hidden absolute left-0 right-0 mt-1 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto divide-y divide-slate-800/80 z-[600]"></div>
-                </div>
-            </div>
-
-            <!-- Control Flotante de Brújula y Rotación de Norte (Mapa 2 - Oculto por defecto) -->
-            <div id="uiCompassOverlay2" class="hidden absolute top-28 right-2.5 z-[500] flex flex-col items-end gap-1.5 pointer-events-auto transition-opacity duration-200">
-                <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl p-1.5 shadow-xl flex flex-col items-center gap-1">
-                    <button id="btnResetNorth2" class="relative w-9 h-9 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center transition group">
-                        <span class="absolute top-0.5 text-[8px] font-bold text-rose-400 tracking-tighter">N</span>
-                        <div id="compassNeedle2" class="w-5 h-5 flex items-center justify-center transition-transform duration-75" style="transform: rotate(0deg);">
-                            <svg viewBox="0 0 24 24" class="w-4 h-4">
-                                <polygon points="12,2 16,12 12,10 8,12" fill="#f43f5e"/>
-                                <polygon points="12,22 16,12 12,14 8,12" fill="#cbd5e1"/>
-                            </svg>
-                        </div>
-                    </button>
-                    <span id="bearingValue2" class="font-mono text-[10px] font-bold text-emerald-300">0° N</span>
-                    <button id="btnToggleRotPanel2" class="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800/80 w-full text-center transition">
-                        <i class="fa-solid fa-rotate"></i> Girar
-                    </button>
-                </div>
-
-                <div id="rotPanel2" class="hidden bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-xl p-2.5 shadow-2xl w-48 flex flex-col gap-2">
-                    <div class="flex items-center justify-between text-[11px] text-slate-300 font-medium">
-                        <span>Orientación Norte</span>
-                        <button data-map="2" data-angle="0" class="quick-rot-btn text-[10px] text-emerald-400 hover:underline font-mono">Reset 0°</button>
-                    </div>
-                    <input id="bearingSlider2" type="range" min="0" max="359" value="0" class="bearing-slider w-full" />
-                    <div class="grid grid-cols-4 gap-1">
-                        <button data-map="2" data-delta="-45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-45°</button>
-                        <button data-map="2" data-delta="-15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">-15°</button>
-                        <button data-map="2" data-delta="15" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+15°</button>
-                        <button data-map="2" data-delta="45" class="delta-rot-btn px-1.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-slate-200 border border-slate-700">+45°</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Barra inferior compacta: Altitud s.n.m. + Coordenadas del Mapa 2 (Siempre visible en la base) -->
-            <div id="uiCoordsOverlay2" class="absolute bottom-2 left-2 z-[500] pointer-events-none flex items-center gap-1.5 bg-slate-900/85 backdrop-blur-md px-2 py-0.5 rounded-md border border-slate-800/90 text-[10px] font-mono text-slate-300 shadow">
-                <span class="text-emerald-400 font-semibold flex items-center gap-1" title="Altitud del punto central sobre el nivel del mar">
-                    <i class="fa-solid fa-mountain text-[9px]"></i>
-                    <span id="elevMap2">-- m</span>
-                </span>
-                <span class="text-slate-600">|</span>
-                <span id="coordsMap2" class="text-slate-400">40.3280, -3.7645</span>
-                <span id="scaleBadgeMap2" class="hidden md:inline px-1 rounded bg-emerald-500/15 text-emerald-300 text-[9px]">Escala Real (1:1)</span>
-            </div>
-
-            <!-- Tarjeta Flotante de Medición Ultra-Compacta - MAPA 2 -->
-            <div id="measureCard2" class="hidden absolute bottom-8 left-2 z-[550] bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-lg px-2 py-1 shadow-xl pointer-events-auto flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                <span id="distPrimary2" class="font-mono text-xs font-bold text-white">0.0 m</span>
-                <span id="measureCount2" class="font-mono text-[9px] text-slate-400">(0)</span>
-                <div class="flex items-center gap-1 ml-0.5">
-                    <button id="btnUndoMeasure2" title="Deshacer punto" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[9px] disabled:opacity-40" disabled>
-                        <i class="fa-solid fa-rotate-left"></i>
-                    </button>
-                    <button id="btnClearMeasure2" title="Borrar medición" class="px-1.5 py-0.5 rounded bg-rose-600/25 hover:bg-rose-600 text-rose-300 hover:text-white text-[9px] transition">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+            <!-- Barra de estado inferior fija del Mapa 2 -->
+            <div id="uiCoordsOverlay2" class="h-6 px-2.5 bg-slate-950 border-t border-slate-800/90 flex items-center justify-between gap-2 shrink-0 z-[500] text-[10px] font-mono text-slate-300">
+                <div class="flex items-center gap-1.5 min-w-0 truncate">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                    <span class="text-emerald-400 font-semibold flex items-center gap-1 shrink-0" title="Altitud del punto central sobre el nivel del mar">
+                        <i class="fa-solid fa-mountain text-[9px]"></i>
+                        <span id="elevMap2">-- m</span>
+                    </span>
+                    <span class="text-slate-700">|</span>
+                    <span id="coordsMap2" class="text-slate-400 truncate">40.3280, -3.7645</span>
                 </div>
+                <span id="scaleBadgeMap2" class="px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-300 text-[9px] shrink-0">Escala Real (1:1)</span>
             </div>
         </section>
 
         <!-- ==================== VENTANA FLOTANTE ARRASTRABLE Y REDIMENSIONABLE: SUPERPOSICIÓN TRANSPARENTE ==================== -->
-        <div id="overlayMiniWindow" style="width: 430px; height: 265px; left: calc(50% - 215px); bottom: 14px;" class="hidden fixed z-[880] max-w-[96vw] max-h-[85vh] min-w-[260px] min-h-[180px] bg-slate-900/95 backdrop-blur-xl border border-cyan-500/45 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-            <!-- Barra de título arrastrable -->
+        <div id="overlayMiniWindow" style="width: 430px; height: 265px; left: calc(50% - 215px); bottom: 32px;" class="hidden fixed z-[880] max-w-[96vw] max-h-[85vh] min-w-[260px] min-h-[180px] bg-slate-900/95 backdrop-blur-xl border border-cyan-500/45 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div id="overlayDragHandle" class="px-3 py-1.5 bg-slate-950/95 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0 cursor-move touch-none">
                 <div class="flex items-center gap-1.5 min-w-0">
                     <i class="fa-solid fa-grip-vertical text-slate-500 text-xs"></i>
@@ -503,8 +524,7 @@
                 </div>
             </div>
 
-            <!-- Lienzo dual superpuesto en tiempo real -->
-            <div class="relative flex-1 w-full h-full overflow-hidden bg-slate-950">
+            <div class="relative flex-1 min-h-0 w-full overflow-hidden bg-slate-950">
                 <div id="overlayMap1" class="absolute inset-0 w-full h-full z-10 pointer-events-none"></div>
                 <div id="overlayMap2" class="absolute inset-0 w-full h-full z-20 pointer-events-none transition-opacity duration-75" style="opacity: 0.55;"></div>
 
@@ -514,7 +534,6 @@
                 </div>
             </div>
 
-            <!-- Barra inferior de control de transparencia + tirador de redimensionado -->
             <div class="relative px-3 py-2 pr-6 bg-slate-950/95 border-t border-slate-800 flex items-center gap-2 shrink-0">
                 <i class="fa-solid fa-circle-half-stroke text-[#00E5FF] text-xs"></i>
                 <input id="overlayOpacitySlider" type="range" min="0" max="100" value="55" class="opacity-slider flex-1 min-w-0" />
@@ -525,7 +544,6 @@
                     <button data-opacity="100" class="preset-opacity-btn px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[9px] font-mono text-slate-300">100%</button>
                 </div>
 
-                <!-- Tirador de cambio de tamaño en la esquina inferior derecha -->
                 <div id="overlayResizeHandle" title="Arrastrar para cambiar tamaño" class="absolute bottom-0 right-0 w-5 h-5 cursor-nwse-resize flex items-end justify-end p-1 text-cyan-400/80 hover:text-cyan-300 touch-none">
                     <svg viewBox="0 0 12 12" class="w-3 h-3">
                         <path d="M11 1L1 11M11 5L5 11M11 9L9 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -688,7 +706,7 @@
             syncPan: false,
             syncBearing: false,
             splitDirection: isMobileOrPortrait() ? 'horizontal' : 'vertical',
-            cleanMode: { 1: true, 2: true }, // Ocultos por defecto
+            cleanMode: { 1: true, 2: true },
             isMeasuring: false,
             measurePoints1: [],
             measurePoints2: [],
@@ -740,9 +758,7 @@
                     elevationCache.set(cacheKey, meters);
                     elBadge.textContent = `${meters.toLocaleString('es-ES')} m`;
                 }
-            } catch (e) {
-                // Silenciar si no hay conexión temporal
-            }
+            } catch (e) {}
         }
 
         /**************************************************************************
@@ -796,9 +812,9 @@
                 if (proj === 'mercator') {
                     badge.textContent = `Mercator ×${mercatorExpansion}`;
                 } else if (proj === 'true_size') {
-                    badge.textContent = 'Escala Real (1:1)';
+                    badge.textContent = 'Escala Real 1:1';
                 } else {
-                    badge.textContent = 'Gall-Peters (Área Eq.)';
+                    badge.textContent = 'Gall-Peters';
                 }
             });
         }
@@ -844,7 +860,6 @@
         const measureLayerGroup1 = L.layerGroup().addTo(map1);
         const measureLayerGroup2 = L.layerGroup().addTo(map2);
 
-        // Consultar altitud inicial de ambos centros
         fetchCenterElevation(1, INITIAL_CENTER[0], INITIAL_CENTER[1]);
         fetchCenterElevation(2, INITIAL_CENTER[0], INITIAL_CENTER[1]);
 
@@ -952,7 +967,7 @@
                 win.style.height = `${initH}px`;
                 if (!win.dataset.moved) {
                     win.style.left = `${Math.max(10, (window.innerWidth - initW) / 2)}px`;
-                    win.style.top = `${Math.max(56, window.innerHeight - initH - 14)}px`;
+                    win.style.top = `${Math.max(56, window.innerHeight - initH - 32)}px`;
                     win.style.bottom = 'auto';
                 }
 
@@ -1843,18 +1858,30 @@
                 topOverlay.classList.add('hidden');
                 compassOverlay.classList.add('hidden');
                 iconBtn.className = 'fa-solid fa-eye text-xs text-amber-400';
-                btnClean.classList.add('opacity-70', 'hover:opacity-100');
+                btnClean.classList.add('opacity-75', 'hover:opacity-100');
             } else {
                 panel.classList.remove('map-ui-hidden');
                 topOverlay.classList.remove('hidden');
                 compassOverlay.classList.remove('hidden');
                 iconBtn.className = `fa-solid fa-eye-slash text-xs ${mapNum === 1 ? 'text-blue-400' : 'text-emerald-400'}`;
-                btnClean.classList.remove('opacity-70', 'hover:opacity-100');
+                btnClean.classList.remove('opacity-75', 'hover:opacity-100');
             }
         }
 
         document.getElementById('btnCleanMap1').addEventListener('click', () => setMapCleanMode(1, !state.cleanMode[1]));
         document.getElementById('btnCleanMap2').addEventListener('click', () => setMapCleanMode(2, !state.cleanMode[2]));
+
+        function refreshAllMapSizes() {
+            requestAnimationFrame(() => {
+                map1.invalidateSize({ animate: false });
+                map2.invalidateSize({ animate: false });
+                if (state.overlayActive) {
+                    overlayMap1.invalidateSize({ animate: false });
+                    overlayMap2.invalidateSize({ animate: false });
+                    syncOverlayMaps();
+                }
+            });
+        }
 
         function applySplitDirection(direction) {
             state.splitDirection = direction;
@@ -1876,10 +1903,10 @@
                 icon.className = 'fa-solid fa-table-columns text-xs sm:text-sm text-cyan-400';
             }
 
-            setTimeout(() => { map1.invalidateSize(); map2.invalidateSize(); }, 180);
+            refreshAllMapSizes();
+            setTimeout(refreshAllMapSizes, 180);
         }
 
-        // Aplicar distribución inicial automática (horizontal en móvil/vertical, vertical en PC)
         applySplitDirection(state.splitDirection);
         setMapCleanMode(1, true);
         setMapCleanMode(2, true);
@@ -1892,19 +1919,21 @@
             if (e.key === 'Escape' && state.isMeasuring) toggleMeasureMode(false);
         });
 
+        if (typeof ResizeObserver !== 'undefined') {
+            const gridObserver = new ResizeObserver(() => {
+                refreshAllMapSizes();
+            });
+            gridObserver.observe(document.getElementById('mapsGridContainer'));
+        }
+
         let lastOrientationPortrait = isMobileOrPortrait();
         window.addEventListener('resize', () => {
             const currentPortrait = isMobileOrPortrait();
             if (currentPortrait !== lastOrientationPortrait) {
                 lastOrientationPortrait = currentPortrait;
                 applySplitDirection(currentPortrait ? 'horizontal' : 'vertical');
-            }
-            map1.invalidateSize();
-            map2.invalidateSize();
-            if (state.overlayActive) {
-                overlayMap1.invalidateSize();
-                overlayMap2.invalidateSize();
-                syncOverlayMaps();
+            } else {
+                refreshAllMapSizes();
             }
         });
     </script>
